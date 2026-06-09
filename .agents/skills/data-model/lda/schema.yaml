@@ -1,0 +1,229 @@
+# Dataset schema for U.S. Lobbying Disclosure Act (LDA) filings from the
+# Congress/Senate unified REST API (https://lda.gov/api/).
+#
+# Atomizer output uses Record.Source "lda". Filings are passive filing entities
+# keyed by lda_filing_uuid; registrant and client are organization entities linked
+# from the filing via lda_registrant / lda_client relationships.
+name: "lda"
+description: "Lobbying Disclosure Act LD-1/LD-2 filings (registrations and quarterly activity) from the LDA.gov REST API"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "lda_filing"
+    description: "A lobbying disclosure (registration or quarterly activity) identified by lda_filing_uuid"
+    display_name: "LDA filing"
+    mergeability: not_mergeable
+    strong_id_properties: ["lda_filing_uuid"]
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["Washington, DC, US", "Arlington, VA, US"]
+    passive: true
+
+properties:
+  - name: "lda_filing_uuid"
+    type: string
+    description: "Stable UUID of the filing in the LDA REST API"
+    display_name: "LDA Filing UUID"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "filing_type"
+    namespace: "lda"
+    type: string
+    description: "Machine filing type code (e.g. RR, Q1) from the API filing_type field; human label is attribute filing_type_display when present"
+    display_name: "LDA Filing Type Code"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "filing_year"
+    namespace: "lda"
+    type: float
+    description: "Reporting year associated with the filing"
+    display_name: "LDA Filing Year"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "filing_period"
+    namespace: "lda"
+    type: string
+    description: "Reporting period code from filing_period (string or number in JSON); human label is attribute filing_period_display when present"
+    display_name: "LDA Filing Period Code"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "income"
+    namespace: "lda"
+    type: string
+    description: "Income amount reported on the filing when present (API decimal as string)"
+    display_name: "LDA Reported Income"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "expenses"
+    namespace: "lda"
+    type: string
+    description: "Expenses amount reported on the filing when present (API decimal as string)"
+    display_name: "LDA Reported Expenses"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "dt_posted"
+    namespace: "lda"
+    type: string
+    description: "Date and time the filing was posted (dt_posted), ISO-8601 string from the API"
+    display_name: "LDA Date Posted"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "filing_document_url"
+    namespace: "lda"
+    type: string
+    description: "Public URL of the filing document (HTML/PDF) from filing_document_url"
+    display_name: "LDA Filing Document URL"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "posted_by_name"
+    namespace: "lda"
+    type: string
+    description: "Name of the individual who posted the filing (posted_by_name)"
+    display_name: "LDA Posted By"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    passive: true
+
+  - name: "lobbying_causes"
+    namespace: "lda"
+    type: string
+    description: >-
+      One atom per lobbying_activities row: "CODE (Display)" from general_issue_code and
+      general_issue_code_display. Narrative text is attribute lobbying_cause_description on the
+      same atom when present (same pattern as patent cpc_code + cpc_description).
+    display_name: "LDA Lobbying Causes"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    examples:
+      - "BUD (Budget/Appropriations)"
+      - "HCR (Health Issues)"
+    passive: true
+
+  - name: "party_role"
+    namespace: "lda"
+    type: string
+    description: "Whether this organization row is the lobbying registrant or the client on the linked LDA filing"
+    display_name: "LDA Party Role"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["registrant", "client"]
+    passive: true
+
+  - name: "name"
+    type: string
+    description: "Display name of the entity"
+    display_name: "Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "lda_registrant_id"
+    type: string
+    description: "Stable LDA API registrant id (registrant.id) as a string, for entity resolution"
+    display_name: "LDA Registrant ID"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "lda_client_internal_id"
+    type: string
+    description: "Stable LDA API internal client row id (client.id) as a string, for entity resolution"
+    display_name: "LDA Client Internal ID"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+relationships:
+  - name: "lda_registrant"
+    description: "The lobbying registrant firm that filed this LDA disclosure"
+    display_name: "LDA Registrant"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    target_flavors: ["organization"]
+    passive: true
+
+  - name: "lda_client"
+    description: "The client organization on whose behalf lobbying is reported for this LDA filing"
+    display_name: "LDA Client"
+    mergeability: not_mergeable
+    domain_flavors: ["lda_filing"]
+    target_flavors: ["organization"]
+    passive: true
+
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["location"]
+    passive: true
+
+attributes:
+  - properties: ["filing_period"]
+    property_namespace: "lda"
+    name: "filing_period_display"
+    type: string
+    description: "Human-readable reporting period label from filing_period_display on the same atom as the period code"
+    display_name: "LDA Filing Period"
+    mergeability: not_mergeable
+
+  - properties: ["filing_type"]
+    property_namespace: "lda"
+    name: "filing_type_display"
+    type: string
+    description: "Human-readable filing type label from filing_type_display on the same atom as the type code"
+    display_name: "LDA Filing Type"
+    mergeability: not_mergeable
+
+  # Narrative for one lobbying issue row. Stored as a quad attribute on each lobbying_causes atom.
+  - properties: ["lobbying_causes"]
+    property_namespace: "lda"
+    name: "lobbying_cause_description"
+    type: string
+    description: >-
+      lobbying_activities[].description for that row (optional trailing posted timestamp stripped).
+      Omitted as an attribute when the description is empty.
+    display_name: "LDA Lobbying Cause Description"
+    mergeability: not_mergeable
+
+events: []

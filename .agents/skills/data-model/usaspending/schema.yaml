@@ -1,0 +1,863 @@
+# Dataset schema for USAspending.gov.
+#
+# Atomizer output uses Record.Source one of:
+#   "usaspending"           — reference catalogs (agencies, NAICS, PSC, assistance listings)
+#   "usaspending_contract"  — contracts and their transaction sub-records
+#   "usaspending_idv"       — IDV parent awards and their transaction sub-records
+#   "usaspending_grant"     — grants and their transaction sub-records
+#   "usaspending_subaward"  — subaward records from bulk Subaward CSV archives
+#
+# See DATA_DICTIONARY.md in this directory for the full entity/property/
+# relationship model. This schema is being filled in incrementally as each
+# A9 sub-pipeline lands; A10 (`Create dataset schema.yaml; run schemacheck`)
+# is the final reconciliation pass.
+name: "usaspending"
+description: "Federal contracts, IDVs, grants, transactions, and subawards from USAspending.gov (Treasury / Bureau of the Fiscal Service); recipients keyed by UEI, agencies keyed by CGAC."
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "uei"
+      - "usaspending_toptier_agency_code"
+      - "usaspending_subtier_agency_code"
+      - "usaspending_internal_id"
+
+  - name: "contract"
+    description: "A federal procurement contract award (or modification thereof) recorded on USAspending.gov — IDV-like instruments are represented by the separate `idv` flavor"
+    display_name: "Contract"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "generated_unique_award_id"
+      - "usaspending_internal_id"
+
+  - name: "idv"
+    description: "An Indefinite Delivery Vehicle (IDV) — a federal procurement instrument such as a BPA, GWAC, IDIQ, FSS, or BOA against which child contract awards (`contract` flavor) are placed"
+    display_name: "Indefinite Delivery Vehicle (IDV)"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "generated_unique_award_id"
+      - "usaspending_internal_id"
+
+  - name: "grant"
+    description: "A federal financial-assistance award (grant, cooperative agreement, direct payment, or similar non-procurement instrument) recorded on USAspending.gov"
+    display_name: "Grant"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "generated_unique_award_id"
+      - "usaspending_internal_id"
+
+  - name: "federal_program"
+    description: "A federal financial-assistance program identified by its Assistance Listing (CFDA) number — e.g., 93.778 \"Medicaid\""
+    display_name: "Federal program (CFDA)"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "assistance_listing_number"
+
+  - name: "subaward"
+    description: "A sub-award funded by a prime contract, IDV, or grant — reported through the SAM Subaward Reporting System (formerly FSRS) and surfaced on USAspending.gov"
+    display_name: "Subaward"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "subaward_sam_report_id"
+
+  - name: "transaction"
+    description: "A single FPDS (procurement) or FABS (financial-assistance) modification applied to a prime award (contract, IDV, or grant) on USAspending.gov — preserves the per-action obligation history that the rolled-up award entity aggregates"
+    display_name: "Award transaction"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "transaction_unique_id"
+
+  - name: "industry"
+    description: "An industry classification of economic activity (e.g. NAICS or SIC) identifying the line of business associated with an organization or award"
+    display_name: "Industry"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "naics_code"
+
+  - name: "product_service"
+    description: "A Product or Service Code (PSC) from the Federal Procurement Data System describing what was purchased under a contract"
+    display_name: "Product/Service (PSC)"
+    mergeability: not_mergeable
+    passive: true
+    strong_id_properties:
+      - "psc_code"
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure. USAspending exposes the FFATA top-5 compensated officers of award recipients."
+    display_name: "Person"
+    mergeability: mergeable
+    passive: true
+
+  - name: "location"
+    description: "A geographic location \u2014 typically a US city + state, or a foreign country. USAspending exposes both the recipient's headquarters address and the place of performance of an award."
+    display_name: "Location"
+    mergeability: mergeable
+    passive: true
+
+properties:
+  # Recipient organizations
+  - name: "uei"
+    type: string
+    description: "Unique Entity Identifier (12-character alphanumeric) assigned by SAM.gov; the federal vendor's canonical identifier since April 2022. Cross-source ID (intentionally un-namespaced) so EDGAR / GLEIF / FDIC etc. resolve against the same property."
+    display_name: "UEI"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "duns"
+    namespace: "usaspending"
+    type: string
+    description: "Legacy 9-digit Dun & Bradstreet DUNS number for federal vendors; sunset April 2022 in favor of UEI but retained for joining historical records that were never crosswalked"
+    display_name: "DUNS (legacy)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "parent_recipient_uei"
+    namespace: "usaspending"
+    type: string
+    description: "UEI of the recipient's ultimate parent corporate entity per SAM.gov's hierarchy snapshot. Caveat: SAM.gov hierarchy lags real-world M&A by months to years; treat as point-in-time signal rather than current truth."
+    display_name: "Parent recipient UEI"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "business_categories"
+    namespace: "usaspending"
+    type: string
+    description: "Repeated property; one atom per category the recipient is classified under for federal procurement / assistance purposes (e.g., \"Small Business\", \"Minority Owned Business\", \"U.S. Regional/State Government\", \"Corporate Entity Not Tax Exempt\")"
+    display_name: "Business category"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "physical_address"
+    namespace: "usaspending"
+    type: string
+    description: "Recipient headquarters street address formatted as a single line (e.g., \"500 W MAIN STREET, LOUISVILLE, KY 40202\"). Concatenated from recipient.location.address_line1 + city + state + zip5."
+    display_name: "Physical address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "recipient_top_officer_compensation"
+    namespace: "usaspending"
+    type: float
+    description: "Reported annual compensation in USD for a FFATA top-5 compensated executive of the recipient. Emitted as a property on the person sub-record; the organization carries one such atom per disclosed officer."
+    display_name: "Top officer compensation (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    passive: true
+
+  # Location properties
+  - name: "location_country_code"
+    namespace: "usaspending"
+    type: string
+    description: "ISO 3166-1 alpha-3 country code (e.g., \"USA\", \"GBR\", \"DEU\")"
+    display_name: "Country code"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    passive: true
+
+  - name: "location_state_code"
+    namespace: "usaspending"
+    type: string
+    description: "Two-character US state code (e.g., \"KY\", \"CA\"); null for non-US locations"
+    display_name: "State code"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    passive: true
+
+  - name: "location_congressional_district"
+    namespace: "usaspending"
+    type: string
+    description: "US congressional district code (2-digit numeric, or \"AL\" for at-large)"
+    display_name: "Congressional district"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    passive: true
+
+  # Federal agencies (toptier == cabinet-level / independent; subtier == bureaus / sub-organizations)
+  - name: "usaspending_toptier_agency_code"
+    type: string
+    description: "USAspending toptier agency code — the 3-4 digit CGAC (Common Government-wide Accounting Classification) code identifying a cabinet-level or independent federal agency (e.g., \"097\" for DOD)"
+    display_name: "Toptier agency code (CGAC)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "usaspending_subtier_agency_code"
+    type: string
+    description: "USAspending subtier agency code — the 4-digit code identifying a bureau or sub-organization within a toptier agency (e.g., \"9700\" for the Department of the Air Force within DOD)"
+    display_name: "Subtier agency code"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "usaspending_agency_abbreviation"
+    type: string
+    description: "Common abbreviation for a USAspending federal agency (e.g., \"DOD\", \"USDA\", \"NASA\")"
+    display_name: "Agency abbreviation"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "usaspending_agency_slug"
+    type: string
+    description: "USAspending URL slug for the agency profile page on usaspending.gov (e.g., \"department-of-defense\")"
+    display_name: "Agency URL slug"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "agency_role"
+    type: string
+    description: "Distinguishes the role of a federal-agency organization in USAspending: \"federal_agency_toptier\" (CGAC parent) or \"federal_agency_subtier\" (bureau/sub-organization)"
+    display_name: "Federal agency role"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "usaspending_internal_id"
+    type: string
+    description: "USAspending.gov internal database key — preserved alongside external strong IDs (UEI, CGAC, generated_unique_award_id) so payloads that reference an agency, recipient, or award by integer id (e.g., awarding_agency.id) can be joined to the same KG entity"
+    display_name: "USAspending internal ID"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "contract", "idv", "grant"]
+    passive: true
+
+  # Award properties shared across contract, idv, and grant flavors
+  - name: "generated_unique_award_id"
+    type: string
+    description: "USAspending's stable per-award unique key (e.g., \"CONT_AWD_HT940216C0001_9700_-NONE-_-NONE-\" for a contract, \"ASST_NON_2505CA5MAP_075\" for a grant); the canonical strong ID for an award entity"
+    display_name: "Generated unique award ID"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "piid"
+    type: string
+    description: "Procurement Instrument Identifier — the human-recognizable contract or IDV number (e.g., \"HT940216C0001\")"
+    display_name: "PIID"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "fain"
+    type: string
+    description: "Federal Award Identification Number — the human-recognizable identifier for a financial-assistance award (grant, cooperative agreement, etc.) (e.g., \"2505CA5MAP\")"
+    display_name: "FAIN"
+    mergeability: not_mergeable
+    domain_flavors: ["grant"]
+    passive: true
+
+  - name: "total_obligation"
+    namespace: "usaspending"
+    type: float
+    description: "Total obligated amount on the award across all transactions to date, in USD (as reported by USAspending)"
+    display_name: "Total obligation (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_start_date"
+    namespace: "usaspending"
+    type: string
+    description: "Performance/period-of-performance start date for the award, ISO-8601 YYYY-MM-DD"
+    display_name: "Award start date"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_end_date"
+    namespace: "usaspending"
+    type: string
+    description: "Performance/period-of-performance end date for the award, ISO-8601 YYYY-MM-DD (current period end for active awards)"
+    display_name: "Award end date"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_description"
+    namespace: "usaspending"
+    type: string
+    description: "USAspending's free-text description of the award purpose (often truncated, may include FPDS-style prefixes like \"IGF::OT::IGF\" for contracts or CFDA program names for grants)"
+    display_name: "Award description"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_type_code"
+    namespace: "usaspending"
+    type: string
+    description: "Short award-type code from FPDS / FABS: \"A\"/\"B\"/\"C\"/\"D\" for contracts; \"IDV_A\" through \"IDV_E\" (plus \"IDV_B_A\"/\"B_B\"/\"B_C\") for IDVs; \"02\"/\"03\"/\"04\"/\"05\"/\"F001\"/\"F002\" for grants"
+    display_name: "Award type code"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_type_description"
+    namespace: "usaspending"
+    type: string
+    description: "Human-readable award-type label (e.g., \"DEFINITIVE CONTRACT\", \"PURCHASE ORDER\", \"GWAC Government Wide Acquisition Contract\", \"PROJECT GRANT\")"
+    display_name: "Award type"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_date_signed"
+    namespace: "usaspending"
+    type: string
+    description: "Date the contract or grant was originally signed (ISO-8601 YYYY-MM-DD)"
+    display_name: "Date signed"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_last_modified_date"
+    namespace: "usaspending"
+    type: string
+    description: "Date the award record was most recently updated on USAspending (ISO-8601 YYYY-MM-DD); the streamer's incremental cursor for the daily delta"
+    display_name: "Last modified date"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "award_potential_end_date"
+    namespace: "usaspending"
+    type: string
+    description: "Period-of-performance potential end date including all unexercised options (ISO-8601 YYYY-MM-DD or YYYY-MM-DD HH:MM:SS as returned by the API)"
+    display_name: "Potential end date"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "base_and_all_options"
+    namespace: "usaspending"
+    type: float
+    description: "Total potential contract value including all unexercised options, in USD; the ceiling of the award. Often 0 for unfunded IDV parent vehicles (BPAs, BOAs)."
+    display_name: "Base and all options (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "base_exercised_options"
+    namespace: "usaspending"
+    type: float
+    description: "Total contract value of the base period plus options exercised to date, in USD"
+    display_name: "Base and exercised options (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "total_outlay"
+    namespace: "usaspending"
+    type: float
+    description: "Cumulative outlays (cash payments) made against the award to date, in USD; lags total_obligation as payments are disbursed"
+    display_name: "Total outlay (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "subaward_count"
+    namespace: "usaspending"
+    type: float
+    description: "Number of FFATA/FSRS subawards reported under this prime award (integer-valued float; the dataschema framework uses float for all numeric data)"
+    display_name: "Subaward count"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "total_subaward_amount"
+    namespace: "usaspending"
+    type: float
+    description: "Aggregate dollar value of FFATA/FSRS subawards reported under this prime award, in USD"
+    display_name: "Total subaward amount (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "parent_award_piid"
+    namespace: "usaspending"
+    type: string
+    description: "PIID of the parent IDV under which this delivery/task-order contract was awarded. Searchable property; the topological link to the parent IDV uses parent_award_unique_id (the IDV's strong ID)."
+    display_name: "Parent IDV PIID"
+    mergeability: not_mergeable
+    domain_flavors: ["contract"]
+    passive: true
+
+  - name: "parent_award_unique_id"
+    namespace: "usaspending"
+    type: string
+    description: "generated_unique_award_id of the parent IDV under which this delivery/task-order contract was awarded; used to construct the contract → parent-IDV child_of edge"
+    display_name: "Parent IDV unique ID"
+    mergeability: not_mergeable
+    domain_flavors: ["contract"]
+    passive: true
+
+  # Procurement procedure properties (contracts / IDVs only — derived from
+  # latest_transaction_contract_data on the award detail response).
+  - name: "solicitation_identifier"
+    namespace: "usaspending"
+    type: string
+    description: "Identifier of the original solicitation (RFP / RFQ) that led to this award; enables lifecycle tracing from solicitation to execution"
+    display_name: "Solicitation identifier"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "offers_received_count"
+    namespace: "usaspending"
+    type: float
+    description: "Number of offers received in response to the solicitation (integer-valued float); key competition metric"
+    display_name: "Offers received"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "extent_competed_description"
+    namespace: "usaspending"
+    type: string
+    description: "Level of competition (e.g., \"FULL AND OPEN COMPETITION\", \"NOT COMPETED\", \"FOLLOW ON TO COMPETED ACTION\")"
+    display_name: "Extent competed"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "type_set_aside_description"
+    namespace: "usaspending"
+    type: string
+    description: "Small-business set-aside designation (e.g., \"NO SET ASIDE USED.\", \"SMALL BUSINESS SET ASIDE - TOTAL\", \"8A COMPETED\")"
+    display_name: "Set-aside type"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "type_of_contract_pricing_description"
+    namespace: "usaspending"
+    type: string
+    description: "Pricing structure of the contract (e.g., \"FIRM FIXED PRICE\", \"COST PLUS FIXED FEE\", \"TIME AND MATERIALS\")"
+    display_name: "Contract pricing type"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "commercial_item_acquisition_type"
+    namespace: "usaspending"
+    type: string
+    description: "Whether the government used FAR Part 12 commercial-item procedures (e.g., \"COMMERCIAL PRODUCTS/SERVICES PROCEDURES USED\")"
+    display_name: "Commercial-item acquisition"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "labor_standards_apply"
+    namespace: "usaspending"
+    type: string
+    description: "Whether Service Contract Act / Davis-Bacon Act labor standards apply (typically \"YES\" or \"NO\"; occasionally null)"
+    display_name: "Labor standards apply"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "entity_ownership_type"
+    namespace: "usaspending"
+    type: string
+    description: "Whether the prime contractor is US-owned or foreign-owned (e.g., \"U.S. OWNED BUSINESS\", \"FOREIGN-OWNED BUSINESS NOT INCORPORATED IN THE U.S.\")"
+    display_name: "Entity ownership"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "subcontracting_plan_type"
+    namespace: "usaspending"
+    type: string
+    description: "Whether the prime contractor maintains an individual or commercial subcontracting plan, or none (e.g., \"INDIVIDUAL SUBCONTRACT PLAN\", \"PLAN NOT REQUIRED\")"
+    display_name: "Subcontracting plan"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  - name: "is_multi_year_contract"
+    namespace: "usaspending"
+    type: string
+    description: "Whether the contract is a statutorily defined multi-year procurement (\"YES\"/\"NO\")"
+    display_name: "Multi-year contract"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    passive: true
+
+  # Grant-only properties
+  - name: "total_funding"
+    namespace: "usaspending"
+    type: float
+    description: "Total funding for the grant including federal obligation plus required non-federal cost share, in USD"
+    display_name: "Total funding (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["grant"]
+    passive: true
+
+  - name: "non_federal_funding"
+    namespace: "usaspending"
+    type: float
+    description: "Required non-federal cost-share contribution to the grant, in USD"
+    display_name: "Non-federal funding (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["grant"]
+    passive: true
+
+  - name: "funding_opportunity_number"
+    namespace: "usaspending"
+    type: string
+    description: "Reference to the Notice of Funding Opportunity (NOFO) under which the grant was awarded; often \"NOT APPLICABLE\" for entitlement programs"
+    display_name: "Funding opportunity (NOFO)"
+    mergeability: not_mergeable
+    domain_flavors: ["grant"]
+    passive: true
+
+  # Federal program (CFDA / Assistance Listing)
+  - name: "assistance_listing_number"
+    type: string
+    description: "Federal Assistance Listing number (formerly CFDA number) identifying a financial-assistance program — typically \"NN.NNN\" (e.g., \"93.778\" for Medicaid). Trailing chars may be alphanumeric (e.g., \"93.DC3\")."
+    display_name: "Assistance listing number (CFDA)"
+    mergeability: not_mergeable
+    domain_flavors: ["federal_program"]
+    passive: true
+
+  - name: "cfda_title"
+    type: string
+    description: "Human-readable title of the federal Assistance Listing (formerly CFDA) program (e.g., \"Grants to States for Medicaid\")"
+    display_name: "CFDA program title"
+    mergeability: not_mergeable
+    domain_flavors: ["federal_program"]
+    passive: true
+
+  - name: "assistance_listing_applicant_eligibility"
+    namespace: "usaspending"
+    type: string
+    description: "Description of which entities are legally eligible to apply for this assistance program (state/local governments, non-profits, individuals, etc.); commonly multi-thousand characters of prose"
+    display_name: "Applicant eligibility"
+    mergeability: not_mergeable
+    domain_flavors: ["federal_program"]
+    passive: true
+
+  - name: "assistance_listing_beneficiary_eligibility"
+    namespace: "usaspending"
+    type: string
+    description: "Description of the ultimate end-users of the program funds; commonly multi-thousand characters of prose"
+    display_name: "Beneficiary eligibility"
+    mergeability: not_mergeable
+    domain_flavors: ["federal_program"]
+    passive: true
+
+  - name: "assistance_listing_objectives"
+    namespace: "usaspending"
+    type: string
+    description: "Description of the programmatic goals of the assistance program; commonly multi-thousand characters of prose"
+    display_name: "Program objectives"
+    mergeability: not_mergeable
+    domain_flavors: ["federal_program"]
+    passive: true
+
+  # Subaward properties
+  - name: "subaward_sam_report_id"
+    type: string
+    description: "Subaward identifier assigned by the SAM Subaward Reporting System (formerly FSRS); the canonical strong ID for subaward entities (e.g., \"P010217549\")"
+    display_name: "SAM subaward report ID"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    passive: true
+
+  - name: "subaward_number"
+    type: string
+    description: "Human-readable subaward number assigned by the prime recipient (e.g., \"WPS-16-C-0001\"); not guaranteed unique across primes — use subaward_sam_report_id for resolution"
+    display_name: "Subaward number"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    passive: true
+
+  - name: "subaward_amount"
+    namespace: "usaspending"
+    type: float
+    description: "Sub-award amount in USD as reported on the SAM Subaward Report"
+    display_name: "Subaward amount (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    passive: true
+
+  - name: "subaward_action_date"
+    namespace: "usaspending"
+    type: string
+    description: "Sub-award action date (ISO-8601 YYYY-MM-DD) — the date the subaward was executed"
+    display_name: "Subaward action date"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    passive: true
+
+  - name: "subaward_description"
+    namespace: "usaspending"
+    type: string
+    description: "Free-text description of the subaward purpose (often modification text such as \"MOD M104 – TO ADJUST THE CONTRACT VALUE…\")"
+    display_name: "Subaward description"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    passive: true
+
+  - name: "transaction_unique_id"
+    type: string
+    description: "Canonical USAspending transaction identifier — the FPDS / FABS modification's stable key (e.g., \"CONT_TX_9700_-NONE-_HT940216C0001_P00713_-NONE-_0\"); the strong ID for transaction entities"
+    display_name: "Transaction unique id"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_action_date"
+    namespace: "usaspending"
+    type: string
+    description: "Date the modification action was effective (ISO-8601 YYYY-MM-DD)"
+    display_name: "Transaction action date"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_action_type"
+    namespace: "usaspending"
+    type: string
+    description: "Single-character FPDS / FABS action-type code (e.g., \"A\" additional work, \"B\" supplemental, \"C\" funding only, \"D\" change order)"
+    display_name: "Transaction action type code"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_action_type_description"
+    namespace: "usaspending"
+    type: string
+    description: "Human-readable label for the action type (e.g., \"CHANGE ORDER\", \"FUNDING ONLY ACTION\", \"DEFINITIVE CONTRACT\")"
+    display_name: "Transaction action type"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_modification_number"
+    namespace: "usaspending"
+    type: string
+    description: "Modification number assigned to this transaction (FPDS uses sequential strings like P00001; \"0\" denotes the base award action)"
+    display_name: "Transaction modification number"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_description"
+    namespace: "usaspending"
+    type: string
+    description: "Free-text description of this modification's purpose (often shorthand like \"MANAGED CARE SUPPORT SERVICES - EAST REGION\" or \"OPTION YEAR 3\")"
+    display_name: "Transaction description"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_federal_action_obligation"
+    namespace: "usaspending"
+    type: float
+    description: "Dollar change to the federal obligation effected by this transaction in USD; positive = additional funding, negative = deobligation, zero = administrative modification with no funding impact"
+    display_name: "Transaction federal action obligation (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  - name: "transaction_type_description"
+    namespace: "usaspending"
+    type: string
+    description: "Human-readable contract / assistance type carried on the transaction row (e.g., \"DEFINITIVE CONTRACT\", \"PURCHASE ORDER\", \"PROJECT GRANT\")"
+    display_name: "Transaction award type"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    passive: true
+
+  # Industry (NAICS)
+  - name: "naics_code"
+    type: string
+    description: "North American Industry Classification System code (typically 6 digits) identifying the industry of work performed under a contract (e.g., \"524114\" for Direct Health and Medical Insurance Carriers)"
+    display_name: "NAICS code"
+    mergeability: not_mergeable
+    domain_flavors: ["industry"]
+    passive: true
+
+  - name: "naics_description"
+    type: string
+    description: "Human-readable name of the NAICS industry (e.g., \"DIRECT HEALTH AND MEDICAL INSURANCE CARRIERS\")"
+    display_name: "NAICS description"
+    mergeability: not_mergeable
+    domain_flavors: ["industry"]
+    passive: true
+
+  # Product/Service (PSC)
+  - name: "psc_code"
+    type: string
+    description: "Product or Service Code from the Federal Procurement Data System (FPDS) describing what was procured (e.g., \"Q201\" for medical managed healthcare)"
+    display_name: "PSC code"
+    mergeability: not_mergeable
+    domain_flavors: ["product_service"]
+    passive: true
+
+  - name: "psc_description"
+    type: string
+    description: "Human-readable name of the Product or Service Code (e.g., \"MEDICAL- MANAGED HEALTHCARE\")"
+    display_name: "PSC description"
+    mergeability: not_mergeable
+    domain_flavors: ["product_service"]
+    passive: true
+
+relationships:
+  - name: "awarded_to"
+    namespace: "usaspending"
+    description: "The party that received the award or subaward; subject (contract/IDV/grant/subaward) was awarded to the target (recipient organization, keyed by UEI)"
+    display_name: "Awarded to"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant", "subaward"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "awarded_by"
+    namespace: "usaspending"
+    description: "The federal agency that obligated the award; subject (contract/IDV/grant/subaward) was awarded by the target (toptier agency, keyed by USAspending internal id or CGAC code)"
+    display_name: "Awarded by"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant", "subaward"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "in_industry"
+    namespace: "usaspending"
+    description: "The industry (NAICS) classification of the work performed under this contract or IDV"
+    display_name: "In industry (NAICS)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    range_flavors: ["industry"]
+    passive: true
+
+  - name: "classified_under"
+    namespace: "usaspending"
+    description: "The Product or Service Code (PSC) describing what was procured under this contract or IDV"
+    display_name: "Classified under (PSC)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv"]
+    range_flavors: ["product_service"]
+    passive: true
+
+  - name: "under_program"
+    namespace: "usaspending"
+    description: "The federal financial-assistance program (CFDA / Assistance Listing) that funds this grant"
+    display_name: "Under program (CFDA)"
+    mergeability: not_mergeable
+    domain_flavors: ["grant"]
+    range_flavors: ["federal_program"]
+    passive: true
+
+  - name: "sub_of"
+    namespace: "usaspending"
+    description: "The prime award that funded this subaward; subject (subaward) is funded by the target (contract, IDV, or grant, keyed by generated_unique_award_id)"
+    display_name: "Subaward of"
+    mergeability: not_mergeable
+    domain_flavors: ["subaward"]
+    range_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "is_modification_of"
+    namespace: "usaspending"
+    description: "The prime award this transaction modifies; subject (transaction) is an FPDS or FABS modification of the target (contract, IDV, or grant, keyed by generated_unique_award_id)"
+    display_name: "Modification of"
+    mergeability: not_mergeable
+    domain_flavors: ["transaction"]
+    range_flavors: ["contract", "idv", "grant"]
+    passive: true
+
+  - name: "awarded_by_subtier"
+    namespace: "usaspending"
+    description: "The awarding subtier agency (e.g., \"Defense Health Agency\" within DOD) that obligated this award; target is an organization entity keyed by usaspending_subtier_agency_code"
+    display_name: "Awarded by subtier"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "funded_by"
+    namespace: "usaspending"
+    description: "The toptier federal agency that funded this award (CGAC parent of the funding subtier). May differ from awarded_by in interagency acquisitions (e.g., GSA awarding a contract funded by DoD). Target is an organization entity keyed by usaspending_internal_id."
+    display_name: "Funded by"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "funded_by_subtier"
+    namespace: "usaspending"
+    description: "The funding subtier federal agency that provided the appropriation for this award; target is an organization entity keyed by usaspending_subtier_agency_code"
+    display_name: "Funded by subtier"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "child_of"
+    namespace: "usaspending"
+    description: "The parent IDV under which this delivery/task-order contract was placed; the IDV is keyed by generated_unique_award_id"
+    display_name: "Child of (parent IDV)"
+    mergeability: not_mergeable
+    domain_flavors: ["contract"]
+    range_flavors: ["idv"]
+    passive: true
+
+  - name: "is_subsidiary_of"
+    namespace: "usaspending"
+    description: "The recipient's ultimate parent corporate entity (per SAM.gov hierarchy snapshot, lag-prone). Target is an organization keyed by UEI."
+    display_name: "Is subsidiary of"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    range_flavors: ["organization"]
+    passive: true
+
+  - name: "is_located_at"
+    namespace: "usaspending"
+    description: "The headquarters / physical address of an organization (recipient or sub-recipient). Target is a location named entity built by concatenating city + state + country."
+    display_name: "Is located at"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    range_flavors: ["location"]
+    passive: true
+
+  - name: "performed_at"
+    namespace: "usaspending"
+    description: "The place of performance of an award (where the contracted work / grant program activity was carried out). Target is a location named entity."
+    display_name: "Performed at"
+    mergeability: not_mergeable
+    domain_flavors: ["contract", "idv", "grant"]
+    range_flavors: ["location"]
+    passive: true
+
+  - name: "employed_by"
+    namespace: "usaspending"
+    description: "The recipient organization that employs this FFATA top-5 disclosed officer."
+    display_name: "Employed by"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    range_flavors: ["organization"]
+    passive: true

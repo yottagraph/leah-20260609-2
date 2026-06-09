@@ -1,0 +1,380 @@
+# Dataset schema for SBA 7(a) & 504 FOIA loan data.
+#
+# Source: https://data.sba.gov/dataset/7-a-504-foia
+# Updated quarterly (typically one month after quarter end).
+#
+# Each CSV row represents a single SBA-backed loan. The atomizer produces:
+#   - A financial_instrument entity for the loan itself
+#   - An organization entity for the borrower
+#   - An organization entity for the bank/CDC/lender
+#   - Optionally, a third-party lender organization (504 loans)
+#   - A location entity for the project county/state
+name: "sbaloans"
+description: "SBA 7(a) and 504 FOIA loan data including loan terms, borrower and lender organizations, and project locations"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "sba_loan"
+    description: "An SBA-backed loan under the 7(a) or 504 program"
+    display_name: "SBA Loan"
+    mergeability: not_mergeable
+    strong_id_properties: ["sba_loan_id"]
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["fdic_certificate_number"]
+    passive: true
+
+  - name: "sba_program"
+    description: "An SBA loan program or sub-program (e.g., SBA 7a: Guaranty, SBA 504: Sec. 504 - Loan Guarantees)"
+    display_name: "SBA Program"
+    mergeability: not_mergeable
+    strong_id_properties: ["sba_program_id"]
+    passive: true
+
+  - name: "industry"
+    description: "An industry classification of economic activity (e.g. NAICS or SIC) identifying the line of business associated with an organization or award"
+    display_name: "Industry"
+    mergeability: not_mergeable
+    strong_id_properties: ["naics_code"]
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["EAST BATON ROUGE, LA", "LINN, IA"]
+    passive: true
+
+properties:
+  # Loan identity
+  - name: "sba_loan_id"
+    type: string
+    description: "Composite SBA loan identifier derived from program, borrower name, lender name, and approval date"
+    display_name: "SBA Loan ID"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["7a_Title2Land,_L.L.C._Newtek_Small_Business_Finance,_Inc._12_5_2020"]
+    passive: true
+
+
+  - name: "sba_program_id"
+    type: string
+    description: "Composite identifier for an SBA program/sub-program (lowercased program name)"
+    display_name: "SBA Program ID"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_program"]
+    examples: ["sba 7a: guaranty", "sba 504: sec. 504 - loan guarantees - private sector financed"]
+    passive: true
+
+  - name: "program"
+    type: string
+    description: "SBA loan program name"
+    display_name: "Program"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_program"]
+    examples: ["7a", "504"]
+    passive: true
+
+  - name: "gross_approval"
+    type: float
+    description: "Total approved loan amount in dollars"
+    display_name: "Gross Approval"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["450000", "810000"]
+    passive: true
+
+  - name: "sba_guaranteed_approval"
+    type: float
+    description: "SBA-guaranteed portion of the loan amount in dollars (7(a) only)"
+    display_name: "SBA Guaranteed Approval"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["337500"]
+    passive: true
+
+  - name: "approval_date"
+    type: string
+    description: "Date the loan was approved"
+    display_name: "Approval Date"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["12/5/2020"]
+    passive: true
+
+  - name: "approval_fiscal_year"
+    type: string
+    description: "Federal fiscal year of approval"
+    display_name: "Approval Fiscal Year"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["2021", "2010"]
+    passive: true
+
+  - name: "first_disbursement_date"
+    type: string
+    description: "Date of first loan disbursement"
+    display_name: "First Disbursement Date"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "term_in_months"
+    type: float
+    description: "Loan term length in months"
+    display_name: "Term in Months"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["120", "240", "300"]
+    passive: true
+
+  - name: "initial_interest_rate"
+    type: float
+    description: "Initial interest rate of the loan as a percentage (7(a) only)"
+    display_name: "Initial Interest Rate"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["6", "5.5"]
+    passive: true
+
+  - name: "interest_type"
+    type: string
+    description: "Whether the interest rate is fixed or variable (7(a) only)"
+    display_name: "Interest Type"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["Fixed", "Variable"]
+    passive: true
+
+  - name: "processing_method"
+    type: string
+    description: "SBA processing method used for the loan"
+    display_name: "Processing Method"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["Preferred Lenders Program", "504 Basic"]
+    passive: true
+
+  - name: "sub_program"
+    type: string
+    description: "SBA sub-program designation"
+    display_name: "Sub-Program"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_program"]
+    examples: ["Guaranty", "Sec. 504 - Loan Guarantees - Private Sector Financed"]
+    passive: true
+
+  - name: "naics_code"
+    type: string
+    description: "North American Industry Classification System code (typically 6 digits) identifying the industry of work performed under a contract (e.g., \"524114\" for Direct Health and Medical Insurance Carriers)"
+    display_name: "NAICS code"
+    mergeability: not_mergeable
+    domain_flavors: ["industry"]
+    examples: ["531390", "721110"]
+    passive: true
+
+  - name: "naics_description"
+    type: string
+    description: "Human-readable name of the NAICS industry (e.g., \"DIRECT HEALTH AND MEDICAL INSURANCE CARRIERS\")"
+    display_name: "NAICS description"
+    mergeability: not_mergeable
+    domain_flavors: ["industry"]
+    examples: ["Other Activities Related to Real Estate", "Hotels (except Casino Hotels) and Motels"]
+    passive: true
+
+  - name: "franchise_name"
+    type: string
+    description: "Name of the franchise if the borrower is a franchisee"
+    display_name: "Franchise Name"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "business_type"
+    type: string
+    description: "Legal structure of the borrowing business"
+    display_name: "Business Type"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["CORPORATION", "LLC", "PARTNERSHIP"]
+    passive: true
+
+  - name: "business_age"
+    type: string
+    description: "Age category of the borrowing business at time of loan"
+    display_name: "Business Age"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["Existing or more than 2 years old", "New Business or 2 years or less"]
+    passive: true
+
+  - name: "loan_status"
+    type: string
+    description: "Current status of the loan"
+    display_name: "Loan Status"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["LIQUID", "P I F", "CHGOFF", "EXEMPT"]
+    passive: true
+
+  - name: "paid_in_full_date"
+    type: string
+    description: "Date the loan was paid in full"
+    display_name: "Paid in Full Date"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "chargeoff_date"
+    type: string
+    description: "Date the loan was charged off"
+    display_name: "Charge-Off Date"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "gross_chargeoff_amount"
+    type: float
+    description: "Gross charge-off amount in dollars"
+    display_name: "Gross Charge-Off Amount"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "revolver_status"
+    type: string
+    description: "Whether the loan is a revolving line of credit (7(a) only)"
+    display_name: "Revolver Status"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "jobs_supported"
+    type: float
+    description: "Number of jobs supported by the loan"
+    display_name: "Jobs Supported"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    examples: ["9", "250"]
+    passive: true
+
+  - name: "third_party_dollars"
+    type: float
+    description: "Third-party lender contribution in dollars (504 only)"
+    display_name: "Third-Party Dollars"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "sba_district_office"
+    type: string
+    description: "SBA district office that processed the loan"
+    display_name: "SBA District Office"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  - name: "congressional_district"
+    type: string
+    description: "Congressional district of the project"
+    display_name: "Congressional District"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    passive: true
+
+  # Organization properties
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["11851 Wentling Ave, BATON ROUGE, LA 70816"]
+    passive: true
+
+  - name: "fdic_certificate_number"
+    type: string
+    description: "FDIC Certificate Number uniquely identifying an insured institution, derived from the CERT field in the Institutions API"
+    display_name: "FDIC Certificate Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "ncua_number"
+    type: string
+    description: "NCUA charter number identifying a credit union"
+    display_name: "NCUA Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+relationships:
+  - name: "borrower_of"
+    description: "An organization is the borrower, applicant, or account party on a financial instrument such as a letter of credit, loan, or bond issue."
+    display_name: "Borrower Of"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["sba_loan"]
+    examples: ["Title2Land, L.L.C. is borrower of SBA 7a Loan 317954"]
+    passive: true
+
+  - name: "lender_of"
+    description: "An organization (bank, CDC, or third-party lender) is the lender on an SBA loan"
+    display_name: "Lender Of"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["sba_loan"]
+    examples: ["Newtek Small Business Finance, Inc. is lender of SBA 7a Loan 317954"]
+    passive: true
+
+  - name: "in_program"
+    description: "The SBA program/sub-program under which this loan was made"
+    display_name: "In Program"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    target_flavors: ["sba_program"]
+    passive: true
+
+  - name: "in_industry"
+    description: "The industry (NAICS) classification of the work performed under this contract or IDV"
+    display_name: "In industry (NAICS)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["industry"]
+    passive: true
+
+  - name: "project_is_located_at"
+    description: "Geographic location of the SBA loan's project"
+    display_name: "Project Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["sba_loan"]
+    target_flavors: ["location"]
+    examples: ["SBA 7a Loan 317954 is located at EAST BATON ROUGE, LA"]
+    passive: true
+
+attributes:
+  - properties: ["lender_of"]
+    name: "lender_type"
+    type: string
+    description: "Type of lender in the loan (primary, cdc, third_party)"
+    display_name: "Lender Type"
+    mergeability: not_mergeable
+    examples: ["primary", "cdc", "third_party"]
+
+  - properties: ["lender_of"]
+    name: "lender_amount"
+    type: float
+    description: "Dollar amount lent by this lender"
+    display_name: "Lender Amount"
+    mergeability: not_mergeable
+    examples: ["450000", "810000", "1334500"]

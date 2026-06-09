@@ -1,0 +1,206 @@
+# Dataset schema for FJC Integrated Database — U.S. district court civil cases (SAS extracts).
+#
+# Source: https://www.fjc.gov/research/idb/civil-cases-filed-terminated-and-pending-sy-1988-present
+# Codebook: Civil Codebook 1988 Forward (FJC PDF).
+#
+# Default ingest target is the FY civil SAS file (e.g. cv26.sas7bdat), refreshed by FJC on a schedule.
+name: "fjcidb"
+description: "Federal Judicial Center Integrated Database civil case records for U.S. district courts, including office and docket identity, party labels (paintif/defendant), filing and termination timing, jurisdiction, nature-of-suit entities linked from each case, and disposition codes"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "legal_case"
+    description: "A civil case docketed in a U.S. federal district court, identified by FJC administrative codes rather than PACER"
+    display_name: "Legal case"
+    mergeability: not_mergeable
+    strong_id_properties: ["fjcidb_case_id"]
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: mergeable
+    passive: true
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: mergeable
+    passive: true
+
+  - name: "nature_of_suit"
+    description: "Federal civil nature-of-suit (NOS) code from the U.S. Courts classification"
+    display_name: "Nature of suit"
+    mergeability: not_mergeable
+    strong_id_properties: ["nos_code"]
+    passive: true
+
+properties:
+  - name: "fjcidb_case_id"
+    namespace: "fjcidb"
+    type: string
+    description: "Stable FJC civil case identifier formed from district, office, docket, and filing year"
+    display_name: "FJC civil case ID"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "name"
+    namespace: "fjcidb"
+    type: string
+    description: "Display name of the entity"
+    display_name: "Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "nos_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Nature of suit numeric code (matches IDB NOS and the U.S. Courts civil NOS codebook)"
+    display_name: "NOS code"
+    mergeability: not_mergeable
+    domain_flavors: ["nature_of_suit"]
+    passive: true
+
+  - name: "nos_title"
+    namespace: "fjcidb"
+    type: string
+    description: "Short title for this nature of suit code from the U.S. Courts civil NOS descriptions"
+    display_name: "Nature of suit title"
+    mergeability: not_mergeable
+    domain_flavors: ["nature_of_suit"]
+    passive: true
+
+  - name: "nos_description"
+    namespace: "fjcidb"
+    type: string
+    description: "Official description for this nature of suit code from the U.S. Courts civil NOS descriptions"
+    display_name: "Nature of suit description"
+    mergeability: not_mergeable
+    domain_flavors: ["nature_of_suit"]
+    passive: true
+
+  - name: "district_code"
+    namespace: "fjcidb"
+    type: string
+    description: "FJC district court code for where the civil action was filed (IDB DISTRICT)"
+    display_name: "FJC district code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "office_code"
+    namespace: "fjcidb"
+    type: string
+    description: "FJC office code within the district where the case was filed (IDB OFFICE)"
+    display_name: "FJC office code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "case_docket_number"
+    namespace: "fjcidb"
+    type: string
+    description: "Docket number assigned by the filing office (IDB DOCKET)"
+    display_name: "Docket number"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "case_filing_date"
+    namespace: "fjcidb"
+    type: string
+    description: "Case filing date"
+    display_name: "Filing date"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "termination_date"
+    namespace: "fjcidb"
+    type: string
+    description: "Termination date if the case terminated in the reporting window"
+    display_name: "Termination date"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "origin_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Procedural origin code for the filing"
+    display_name: "Origin code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "jurisdiction_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Jurisdiction code"
+    display_name: "Jurisdiction code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "disposition_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Disposition code when the case terminated"
+    display_name: "Disposition code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "class_action_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Class action designation code"
+    display_name: "Class action code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+  - name: "procedural_progress_code"
+    namespace: "fjcidb"
+    type: string
+    description: "Procedural progress code"
+    display_name: "Procedural progress code"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    passive: true
+
+relationships:
+  - name: "is_plaintiff_in"
+    namespace: "fjcidb"
+    description: "The party is named as the plaintiff side in this FJC civil case"
+    display_name: "Is plaintiff in"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    target_flavors: ["legal_case"]
+    passive: true
+
+  - name: "is_defendant_in"
+    namespace: "fjcidb"
+    description: "The party is named as the defendant side in this FJC civil case"
+    display_name: "Is defendant in"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    target_flavors: ["legal_case"]
+    passive: true
+
+  - name: "has_nature_of_suit"
+    namespace: "fjcidb"
+    description: "The civil case is classified under this federal nature-of-suit code (IDB NOS field)"
+    display_name: "Has nature of suit"
+    mergeability: not_mergeable
+    domain_flavors: ["legal_case"]
+    target_flavors: ["nature_of_suit"]
+    passive: true

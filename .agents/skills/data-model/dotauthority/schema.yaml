@@ -1,0 +1,172 @@
+# Dataset schema for FMCSA Carrier Authority (All With History).
+#
+# Source: https://data.transportation.gov/Trucking-and-Motorcoaches/Carrier-All-With-History/6eyk-hxee
+# Bulk-refreshed periodically by FMCSA; no per-row timestamps.
+#
+# This schema describes motor carrier operating authority records including
+# docket information, authority statuses, insurance requirements, and
+# business contact information.
+name: "dotauthority"
+description: "FMCSA carrier operating authority data including docket numbers, authority statuses, insurance requirements, and business contact information from the Carrier All With History file"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["New York City", "San Francisco", "North America", "Bakery Square"]
+    passive: true
+
+properties:
+  - name: "usdot_number"
+    type: string
+    description: "USDOT number assigned by FMCSA, uniquely identifying a registered motor carrier, broker, or shipper"
+    display_name: "USDOT Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "docket_number"
+    namespace: "dotauthority"
+    type: string
+    description: "FMCSA docket number (MC number) for operating authority"
+    display_name: "Docket Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["MC012892", "MC599911"]
+    passive: true
+
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["1200 SEABOARD DR, HIALEAH, FL 33010"]
+    passive: true
+
+  - name: "phone_number"
+    namespace: "dotauthority"
+    type: string
+    description: "Primary phone number of the carrier"
+    display_name: "Phone Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["5551234567"]
+    passive: true
+
+  - name: "common_authority_status"
+    namespace: "dotauthority"
+    type: string
+    description: "Status of common carrier authority (A=Active, I=Inactive, N=None)"
+    display_name: "Common Authority Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (Active)", "I (Inactive)", "N (None)"]
+    passive: true
+
+  - name: "contract_authority_status"
+    namespace: "dotauthority"
+    type: string
+    description: "Status of contract carrier authority (A=Active, I=Inactive, N=None)"
+    display_name: "Contract Authority Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (Active)", "I (Inactive)", "N (None)"]
+    passive: true
+
+  - name: "broker_authority_status"
+    namespace: "dotauthority"
+    type: string
+    description: "Status of broker authority (A=Active, I=Inactive, N=None)"
+    display_name: "Broker Authority Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (Active)", "I (Inactive)", "N (None)"]
+    passive: true
+
+  - name: "authority_type"
+    namespace: "dotauthority"
+    type: string
+    description: "Carrier authority type flags indicating property, passenger, household goods, private, or enterprise authorization"
+    display_name: "Authority Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["Property", "Passenger", "Household Goods", "Property; Passenger"]
+    passive: true
+
+  - name: "min_coverage_amount"
+    namespace: "dotauthority"
+    type: string
+    description: "Minimum insurance coverage amount required (in thousands of dollars)"
+    display_name: "Minimum Coverage Amount"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["00750", "05000"]
+    passive: true
+
+  - name: "cargo_insurance_required"
+    namespace: "dotauthority"
+    type: float
+    description: "Whether cargo insurance is required (1.0 = yes, 0.0 = no)"
+    display_name: "Cargo Insurance Required"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "bond_required"
+    namespace: "dotauthority"
+    type: float
+    description: "Whether a surety bond is required (1.0 = yes, 0.0 = no)"
+    display_name: "Bond Required"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "bipd_insurance_on_file"
+    namespace: "dotauthority"
+    type: string
+    description: "Bodily injury / property damage insurance filing amount"
+    display_name: "BIPD Insurance On File"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["01000", "05000"]
+    passive: true
+
+  - name: "doing_business_as"
+    namespace: "dotauthority"
+    type: string
+    description: "FMCSA trade name or 'doing business as' (DBA) name when it differs from the legal name; stored as a string attribute on the legal-name entity, not a link to another entity"
+    display_name: "DOT Doing Business As"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["ACME EXPRESS", "SMITH TRUCKING", "CJ TRUCKING"]
+    passive: true
+
+relationships:
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    target_flavors: ["location"]
+    passive: true

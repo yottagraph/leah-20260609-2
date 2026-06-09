@@ -1,0 +1,156 @@
+# Dataset schema for patent grant publications from Google Patents Public Datasets.
+#
+# Structured atomization only — no LLM extraction.
+name: "patents"
+description: "Patent grant publications from Google Patents Public Datasets (titles, abstracts, CPC, inventors, assignees, countries, and languages."
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "patent"
+    description: "A granted patent publication identified by its publication number (WIPO-style number including office prefix, e.g. US-12345678-B2, EP-1234567-B1)"
+    display_name: "Patent"
+    mergeability: not_mergeable
+    strong_id_properties: ["patent_publication_number"]
+    passive: true
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+properties:
+  - name: "patent_publication_number"
+    type: string
+    description: "Canonical patent publication identifier from the publications table (office prefix and kind suffix vary by jurisdiction, e.g. US-12345678-B2, JP-6001234-A)"
+    display_name: "Patent Publication Number"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_grant_date"
+    type: string
+    description: "Patent grant date in YYYY-MM-DD format."
+    display_name: "Patent Grant Date"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_filing_date"
+    type: string
+    description: "Application filing date in YYYY-MM-DD format."
+    display_name: "Patent Filing Date"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_priority_date"
+    type: string
+    description: "Earliest priority date claimed by the patent in YYYY-MM-DD format."
+    display_name: "Patent Priority Date"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_kind_code"
+    type: string
+    description: "Publication kind code (e.g. A1, B1, B2, C1, S, P) distinguishing applications from grants and other document types"
+    display_name: "Patent Kind Code"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_country"
+    type: string
+    description: "WIPO country/office code identifying the issuing patent office (e.g. US, EP, JP, WO). Two-letter ISO 3166-1 alpha-2 for national offices, plus regional/international codes (EP for the European Patent Office, WO for WIPO/PCT)."
+    display_name: "Patent Country"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "title"
+    type: string
+    description: "Title of the entity"
+    display_name: "Title"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_title_language"
+    type: string
+    description: "ISO 639-1 lower-case code of the language used for the patent's title atom (e.g. 'en', 'zh', 'ja'). Emitted only when a title is present."
+    display_name: "Patent Title Language"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_abstract"
+    type: string
+    description: "Patent publication abstract text."
+    display_name: "Patent Abstract"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "patent_abstract_language"
+    type: string
+    description: "ISO 639-1 lower-case code of the language used for the patent's abstract atom (e.g. 'en', 'zh', 'ja'). Emitted only when an abstract is present."
+    display_name: "Patent Abstract Language"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+  - name: "cpc_code"
+    type: string
+    description: "CPC symbol classifying this patent (multi-valued: one atom per direct code on the publication)"
+    display_name: "CPC Code"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    passive: true
+
+relationships:
+  - name: "has_inventor"
+    description: "A patent lists a person as an inventor"
+    display_name: "Has Inventor"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    target_flavors: ["person"]
+    passive: true
+
+  - name: "has_assignee"
+    description: "A patent lists an organization as an assignee"
+    display_name: "Has Assignee"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    target_flavors: ["organization"]
+    passive: true
+
+  - name: "cites_patent"
+    description: "A patent cites another patent publication as prior art (non-patent literature citations are not represented as edges)"
+    display_name: "Cites Patent"
+    mergeability: not_mergeable
+    domain_flavors: ["patent"]
+    target_flavors: ["patent"]
+    passive: true
+
+# Human-readable CPC code description. Stored as a quad attribute on each
+# cpc_code atom when known.
+attributes:
+  - properties: ["cpc_code"]
+    name: "cpc_description"
+    type: string
+    description: "CPC taxonomy title path for this code (from patents-public-data.cpc.definition); omitted when the code is missing from the map"
+    display_name: "CPC Description"
+    mergeability: not_mergeable

@@ -1,0 +1,275 @@
+# Dataset schema for Alpha Vantage earnings call transcripts.
+#
+# This schema describes entity types and properties produced by extracting
+# speaker employment relationships from earnings call transcripts via the
+# EARNINGS_CALL_TRANSCRIPT Alpha Vantage endpoint.
+#
+# Speaker classification uses heuristics + LLM to determine head_of / works_at
+# relationships between persons and the reporting company.
+#
+# Event extraction guidance:
+# - Do NOT extract "Operator" as a participant; it is a generic call-facilitator role.
+# - Prefer named executives, analysts, customers, regulators, and counterparties
+#   that are materially involved in the event.
+name: "avtranscripts"
+description: "Speaker employment relationships extracted from quarterly earnings call transcripts for US-listed companies, sourced from Alpha Vantage."
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  # --- Extraction flavors (used by the LLM during entity/event extraction) ---
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    examples: ["Tim Cook", "Jamie Dimon", "Satya Nadella"]
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    examples: ["Apple Inc.", "JPMorgan Chase", "Federal Reserve"]
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["United States", "China", "Europe"]
+
+  - name: "financial_instrument"
+    description: "A specific asset that can be traded, such as a stock, ETF, bond, CD, or fund. Companies are organizations, NOT financial instruments. Specific currency amounts are NOT financial instruments."
+    display_name: "Financial Instrument"
+    mergeability: not_mergeable
+    strong_id_properties: ["ticker_symbol"]
+    examples: ["AAPL", "SPY", "US Treasury 10Y"]
+    passive: true
+
+  - name: "product"
+    description: "A specific tangible product being sold or marketed by an organization"
+    display_name: "Product"
+    mergeability: not_mergeable
+    examples: ["iPhone", "Azure", "AWS"]
+
+  # --- Passive flavors (not used by extraction LLM, only for structured atoms) ---
+  - name: "earnings_call_transcript"
+    description: "A quarterly earnings call transcript, uniquely identified by ticker and fiscal quarter"
+    display_name: "Earnings Call Transcript"
+    mergeability: not_mergeable
+    strong_id_properties: ["earnings_call_id"]
+    passive: true
+
+properties:
+  - name: "name"
+    type: string
+    description: "Display name of the entity"
+    display_name: "Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "ticker_symbol"
+    type: string
+    description: "Stock ticker symbol as listed on the exchange (e.g., AAPL, IBM, BRK-B), from the NASDAQ screener and Alpha Vantage Meta Data"
+    display_name: "Ticker Symbol"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    examples: ["AAPL", "IBM", "MSFT"]
+    passive: true
+
+  - name: "cik"
+    type: string
+    description: "SEC Central Index Key for the reporting company (when available)"
+    display_name: "CIK"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "earnings_call_id"
+    type: string
+    description: "Unique identifier for the earnings call in TICKER-YYYYQn format"
+    display_name: "Earnings Call ID"
+    mergeability: not_mergeable
+    domain_flavors: ["earnings_call_transcript"]
+    examples: ["AAPL-2024Q1", "IBM-2023Q4"]
+    passive: true
+
+relationships:
+  - name: "head_of"
+    description: "A person is the head of an organization or location, e.g., President, CEO, or equivalent top leadership role"
+    display_name: "Head Of"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    target_flavors: ["organization"]
+    examples: ["Tim Cook head_of Apple Inc.", "Satya Nadella head_of Microsoft Corporation"]
+    passive: true
+
+  - name: "works_at"
+    description: "A person is employed by, or is a founder of an organization. Not to be used for heads or board members of organizations."
+    display_name: "Works At"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    target_flavors: ["organization"]
+    examples: ["Luca Maestri works_at Apple Inc.", "Amy Hood works_at Microsoft Corporation"]
+    passive: true
+
+  - name: "traded_as"
+    description: "Links a company (organization) to the financial instrument (stock ticker) under which its equity is publicly traded"
+    display_name: "Traded As"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["financial_instrument"]
+    examples: ["Apple Inc. traded_as AAPL"]
+    passive: true
+
+  - name: "appears_in"
+    description: "An entity or event appears in a source document"
+    display_name: "Appears In"
+    mergeability: not_mergeable
+    domain_flavors: ["schema::flavor::event"]
+    target_flavors: ["earnings_call_transcript"]
+    examples: ["Guidance raise appears_in AAPL 2024Q2 Earnings Call"]
+    passive: true
+
+attributes:
+  - properties:
+      - "head_of"
+      - "works_at"
+    name: "title"
+    type: string
+    description: "Job title of the person as attributed on the earnings call (e.g., 'Chairman and CEO', 'CFO')"
+    display_name: "Title"
+    mergeability: not_mergeable
+
+# =============================================================================
+# EVENTS (same categories as newsdata)
+# =============================================================================
+
+events:
+  - name: "Bankruptcy"
+    description: "Bankruptcy of a company or person"
+    metadata: { severity: high }
+  - name: "Default"
+    description: "Default on a major loan or debt"
+    metadata: { severity: high }
+  - name: "Seizure"
+    description: "Seizure of assets or property typically by a government or law enforcement"
+    metadata: { severity: high }
+  - name: "Insolvency"
+    description: "Insolvency of a company"
+    metadata: { severity: high }
+  - name: "Expropriation"
+    description: "Expropriation of assets or property"
+    metadata: { severity: high }
+  - name: "Mergers & acquisitions"
+    description: "A merger or acquisition of a company"
+    metadata: { severity: high }
+  - name: "Hostile takeover"
+    description: "Acquiring a company against its management's wishes by purchasing a majority of shares"
+    metadata: { severity: high }
+  - name: "Acts of war"
+    description: "Direct reports of war activities. NOT for historical accounts or obituaries."
+    metadata: { severity: high }
+  - name: "Terrorism"
+    description: "Direct reports of terrorism that are actively happening or predicted to happen. Not for historical accounts."
+    metadata: { severity: high }
+  - name: "Significant legal judgement"
+    description: "Final verdicts in legal trials that directly affect a company, person, or location"
+    metadata: { severity: high }
+  - name: "Cybersecurity breach"
+    description: "A major breach of a company's cybersecurity especially if it will affect the market"
+    metadata: { severity: high }
+  - name: "Major natural disaster"
+    description: "A major, destructive natural disaster such as a hurricane, earthquake, tornado, wildfire, or flood"
+    metadata: { severity: high }
+  - name: "IPO"
+    description: "A report of an initial public offering (IPO) that has happened or is predicted to happen"
+    metadata: { severity: high }
+  - name: "SPAC"
+    description: "A report of a special purpose acquisition company (SPAC) that has happened or is predicted to happen"
+    metadata: { severity: high }
+  - name: "Win of long-term, high-value contract"
+    description: "Major contracts on the order of 10s of millions to billions of dollars"
+    metadata: { severity: high }
+  - name: "Technological breakthrough"
+    description: "Major technological breakthrough (not just adopting new technology). E.g., a new drug, new chip, new aircraft."
+    metadata: { severity: high }
+  - name: "Epidemic/pandemic disease"
+    description: "A major, worldwide or country-wide epidemic or pandemic disease affecting many people"
+    metadata: { severity: high }
+  - name: "Insider trading"
+    description: "Verified insider trading especially if the SEC is involved"
+    metadata: { severity: high }
+  - name: "Dividend announcement"
+    description: "Routine quarterly, monthly, etc. dividend announcements by a company"
+    metadata: { severity: medium }
+  - name: "Corporate restructuring"
+    description: "Restructuring of a company such as an internal reorganization. NOT for mergers or acquisitions."
+    metadata: { severity: medium }
+  - name: "Layoffs"
+    description: "Significant, verified layoffs/firings of staff (not just one or two people) from a company. NOT for labor shortages."
+    metadata: { severity: medium }
+  - name: "Customer loss"
+    description: "Loss of a major customer"
+    metadata: { severity: medium }
+  - name: "Product delays"
+    description: "Significant, verified delays in product delivery"
+    metadata: { severity: medium }
+  - name: "Major leadership change"
+    description: "Major leadership change at a company such as a CEO, CFO, CTO, or Chairman change from one person to another"
+    metadata: { severity: medium }
+  - name: "Credit rating downgrade"
+    description: "A credit rating downgrade of a company"
+    metadata: { severity: medium }
+  - name: "Credit rating upgrade"
+    description: "A credit rating upgrade of a company"
+    metadata: { severity: medium }
+  - name: "Strategic partnership"
+    description: "A strategic partnership between people and/or companies"
+    metadata: { severity: medium }
+  - name: "New funding or investment"
+    description: "Venture capital or private equity investment in a company, such as a Series A, B, etc."
+    metadata: { severity: medium }
+  - name: "Launch of a new product"
+    description: "Launch of a brand new product worthy of press releases (NOT for adopting existing technology)"
+    metadata: { severity: medium }
+  - name: "Major crime"
+    description: "Major crimes such as murder, robbery, etc."
+    metadata: { severity: medium }
+  - name: "Earnings call"
+    description: "Standard quarterly earnings calls"
+    metadata: { severity: medium }
+  - name: "Change in government policy"
+    description: "A significant change in government policy that might affect the financial health of an entity"
+    metadata: { severity: low }
+  - name: "Market commentary"
+    description: "Article discusses mundane changes in the market"
+    metadata: { severity: low }
+  - name: "Political commentary"
+    description: "Mundane political commentary such as polls or pundit analysis"
+    metadata: { severity: low }
+  - name: "Analyst report"
+    description: "Reports from Moody's, S&P Global Ratings, Fitch Ratings, and similar"
+    metadata: { severity: low }
+  - name: "Interview"
+    description: "The article is specifically an interview"
+    metadata: { severity: low }
+  - name: "Industry award"
+    description: "MAJOR awards such as the Nobel Prize, Pulitzer Prize, Turing Award, Edison Awards, etc."
+    metadata: { severity: low }
+  - name: "Regulatory filing & compliance"
+    description: "Typical or routine filings by a company for regulatory and compliance purposes"
+    metadata: { severity: low }
+  - name: "Personnel changes"
+    description: "A change in low- to medium-level personnel such as hiring a new engineer. NOT for major leadership changes or layoffs."
+    metadata: { severity: low }
+  - name: "Sports"
+    description: "Sports news such as a new record, a new player, scores, etc."
+    metadata: { severity: low }
+  - name: "Entertainment"
+    description: "Entertainment news such as a new movie, TV show, album, book, etc."
+    metadata: { severity: low }

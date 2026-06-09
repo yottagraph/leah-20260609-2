@@ -1,0 +1,345 @@
+# Dataset schema for BLS QCEW (Quarterly Census of Employment and Wages).
+#
+# Architecture mirrors FRED:
+#   For each unique QCEW series — the (area_fips, own_code, industry_code,
+#   agglvl_code) tuple — the atomizer emits:
+#     1. A metadata record: subject is the cew_series entity, atoms are
+#        identifying metadata (cew_series_id, area_fips, area_title,
+#        ownership_code/title, naics_code/description, aggregation level,
+#        publisher, etc.). Timestamped at the quarter end date.
+#     2. One quarterly observation record per (series, quarter): subject is
+#        the cew_series, atoms are all quarterly metrics — establishment
+#        count, employment levels, wages, year-over-year percent changes —
+#        all timestamped at the quarter end date.
+#     3. A location context record: subject is the geographic area
+#        (location flavor), single appears_in_cew_series atom pointing at
+#        the cew_series.
+#     4. An industry context record: subject is the NAICS industry
+#        (industry flavor), single appears_in_cew_series atom pointing at
+#        the cew_series.
+#
+# All elements are passive — created by the atomizer from QCEW CSV data,
+# not by LLM extraction.
+#
+# Source identifier used on all records: "blscew-source"
+name: "blscew"
+description: "Quarterly Census of Employment and Wages from the U.S. Bureau of Labor Statistics — quarterly establishment counts, employment levels, total and taxable wages, average weekly wages, and BLS-computed year-over-year changes by US area, ownership sector, and NAICS industry"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "cew_series"
+    description: "A QCEW (Quarterly Census of Employment and Wages) time series identified by the unique combination of area, ownership, industry, and aggregation level. The entity carries metadata atoms and per-quarter observations of employment, wages, and establishment counts."
+    display_name: "QCEW Series"
+    mergeability: not_mergeable
+    strong_id_properties: ["cew_series_id"]
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    strong_id_properties: ["area_fips"]
+    passive: true
+
+  - name: "industry"
+    description: "An industry classification of economic activity (e.g. NAICS or SIC) identifying the line of business associated with an organization or award"
+    display_name: "Industry"
+    mergeability: not_mergeable
+    strong_id_properties: ["naics_code"]
+    passive: true
+
+properties:
+  # --- Strong-id properties ---
+
+  - name: "cew_series_id"
+    type: string
+    description: "Synthetic identifier for a QCEW series formed by joining area_fips, own_code, industry_code, and agglvl_code with dots. Strong id for cew_series entities."
+    display_name: "QCEW Series ID"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["US000.0.10.10", "06000.5.31-33.55", "06037.0.5111.74"]
+    passive: true
+
+  - name: "area_fips"
+    type: string
+    description: "BLS-assigned 5-character QCEW area identifier (FIPS-based). For US states the value is the 2-digit FIPS state code followed by '000' (e.g. '06000' = California). For counties it is the 5-digit county FIPS (e.g. '06037' = Los Angeles County). For MSAs the BLS prefixes a 'C' (e.g. 'C1018' = Albany–Schenectady–Troy MSA). Strong id for the location entity that a cew_series is attached to."
+    display_name: "QCEW Area FIPS"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "location"]
+    examples: ["US000", "06000", "06037", "C1018"]
+    passive: true
+
+  - name: "naics_code"
+    type: string
+    description: "North American Industry Classification System code (typically 6 digits) identifying the industry of work performed under a contract (e.g., \"524114\" for Direct Health and Medical Insurance Carriers)"
+    display_name: "NAICS code"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "industry"]
+    examples: ["10", "31-33", "5111", "541211"]
+    passive: true
+
+  # --- Identity / metadata properties on cew_series ---
+
+  - name: "name"
+    type: string
+    description: "Display name of the entity"
+    display_name: "Name"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "location"]
+    examples: ["California -- Statewide", "U.S. TOTAL · Total Covered · Total, all industries"]
+    passive: true
+
+  - name: "area_title"
+    type: string
+    description: "Human-readable title for a QCEW geographic area (national, state, MSA, or county) as published by BLS."
+    display_name: "QCEW Area Title"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["U.S. TOTAL", "California -- Statewide", "Los Angeles County, California", "Albany-Schenectady-Troy, NY MSA"]
+    passive: true
+
+  - name: "ownership_code"
+    type: string
+    description: "BLS one-character QCEW ownership-sector code: 0 = Total Covered, 1 = Federal Government, 2 = State Government, 3 = Local Government, 5 = Private."
+    display_name: "QCEW Ownership Code"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["0", "1", "2", "3", "5"]
+    passive: true
+
+  - name: "ownership_title"
+    type: string
+    description: "Human-readable QCEW ownership-sector title (Total Covered, Federal Government, State Government, Local Government, Private)."
+    display_name: "QCEW Ownership Title"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["Total Covered", "Federal Government", "State Government", "Local Government", "Private"]
+    passive: true
+
+  - name: "naics_description"
+    type: string
+    description: "Human-readable name of the NAICS industry (e.g., \"DIRECT HEALTH AND MEDICAL INSURANCE CARRIERS\")"
+    display_name: "NAICS description"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "industry"]
+    examples: ["Total, all industries", "Manufacturing", "Newspaper, periodical, book and directory publishers"]
+    passive: true
+
+  - name: "aggregation_level_code"
+    type: string
+    description: "BLS QCEW two-character aggregation-level code describing the geographic and industry granularity of a series — for example national vs statewide vs county, and total vs supersector vs detailed NAICS."
+    display_name: "QCEW Aggregation Level Code"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["10", "55", "74", "78"]
+    passive: true
+
+  - name: "aggregation_level_title"
+    type: string
+    description: "Human-readable description of a QCEW aggregation level (e.g. \"National, by ownership sector\", \"County, by ownership sector and 6-digit NAICS\")."
+    display_name: "QCEW Aggregation Level Title"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["National, by ownership sector", "Statewide, by ownership sector and supersector", "County, by ownership sector and 6-digit NAICS"]
+    passive: true
+
+  - name: "area_type"
+    type: string
+    description: "Classification of a QCEW area as one of national, statewide, msa, or county, derived from the shape of the area_fips code."
+    display_name: "QCEW Area Type"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "location"]
+    examples: ["national", "statewide", "msa", "county"]
+    passive: true
+
+  - name: "naics_level"
+    type: float
+    description: "Granularity of the NAICS code on a QCEW series, expressed as the number of digits. 2.0 = sector or BLS supersector aggregate, 3.0 = subsector, 4.0 = industry group, 5.0 = NAICS industry, 6.0 = national industry."
+    display_name: "QCEW NAICS Level"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series", "industry"]
+    examples: [2.0, 3.0, 4.0, 5.0, 6.0]
+    passive: true
+
+  - name: "publisher"
+    type: string
+    description: "Name of the organization that publishes or maintains the data series, inferred from the release URL domain"
+    display_name: "Publisher"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: ["U.S. Bureau of Labor Statistics"]
+    passive: true
+
+  # --- Quarterly observation properties on cew_series ---
+
+  - name: "establishment_count"
+    type: float
+    description: "Count of QCEW-covered establishments (physical locations of employers) reported by BLS for the series during the quarter."
+    display_name: "QCEW Establishment Count"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [11907855.0, 61375.0]
+    passive: true
+
+  - name: "monthly_employment_m1"
+    type: float
+    description: "Number of QCEW-covered employees on payrolls in the first month of the quarter (BLS uses the pay period including the 12th of the month)."
+    display_name: "QCEW Employment (Month 1)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [152393725.0]
+    passive: true
+
+  - name: "monthly_employment_m2"
+    type: float
+    description: "Number of QCEW-covered employees on payrolls in the second month of the quarter (pay period including the 12th)."
+    display_name: "QCEW Employment (Month 2)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [153129544.0]
+    passive: true
+
+  - name: "monthly_employment_m3"
+    type: float
+    description: "Number of QCEW-covered employees on payrolls in the third month of the quarter (pay period including the 12th)."
+    display_name: "QCEW Employment (Month 3)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [153848430.0]
+    passive: true
+
+  - name: "employment_level"
+    type: float
+    description: "Representative quarterly employment level for the series — taken as the third-month employment, matching the convention BLS uses when publishing single-number QCEW employment figures."
+    display_name: "QCEW Quarterly Employment Level"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [153848430.0]
+    passive: true
+
+  - name: "total_quarterly_wages"
+    type: float
+    description: "Total wages paid (in current US dollars) to all QCEW-covered workers for the series during the quarter."
+    display_name: "QCEW Total Quarterly Wages (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [3037790324790.0]
+    passive: true
+
+  - name: "taxable_quarterly_wages"
+    type: float
+    description: "Portion of total quarterly wages (in current US dollars) subject to UI tax contributions. Always 0 for federal-government employment, which is not subject to UI tax."
+    display_name: "QCEW Taxable Quarterly Wages (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1151875077520.0]
+    passive: true
+
+  - name: "quarterly_contributions"
+    type: float
+    description: "Total UI tax contributions (in current US dollars) associated with the series' employment during the quarter."
+    display_name: "QCEW Quarterly UI Contributions (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [19555346530.0]
+    passive: true
+
+  - name: "avg_weekly_wage"
+    type: float
+    description: "Average weekly wage (in current US dollars) per QCEW-covered employee for the series during the quarter, computed by BLS as total_qtrly_wages / (avg_emplvl × 13)."
+    display_name: "QCEW Average Weekly Wage (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1526.0]
+    passive: true
+
+  # --- BLS-computed year-over-year percent change properties on cew_series ---
+
+  - name: "employment_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in third-month employment for the series, computed by BLS by comparing the current quarter against the same quarter of the prior year."
+    display_name: "QCEW Employment YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1.5, -0.4]
+    passive: true
+
+  - name: "monthly_employment_m1_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in first-month employment for the series."
+    display_name: "QCEW Employment (Month 1) YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1.4]
+    passive: true
+
+  - name: "monthly_employment_m2_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in second-month employment for the series."
+    display_name: "QCEW Employment (Month 2) YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1.4]
+    passive: true
+
+  - name: "establishments_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in establishment count for the series."
+    display_name: "QCEW Establishments YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [1.2]
+    passive: true
+
+  - name: "total_quarterly_wages_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in total quarterly wages for the series."
+    display_name: "QCEW Total Wages YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [5.7]
+    passive: true
+
+  - name: "avg_weekly_wage_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in average weekly wage for the series."
+    display_name: "QCEW Avg Weekly Wage YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [4.2]
+    passive: true
+
+  - name: "taxable_quarterly_wages_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in taxable quarterly wages for the series."
+    display_name: "QCEW Taxable Wages YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [3.3]
+    passive: true
+
+  - name: "quarterly_contributions_yoy_pct_chg"
+    type: float
+    description: "Year-over-year percent change in quarterly UI contributions for the series."
+    display_name: "QCEW UI Contributions YoY %"
+    mergeability: not_mergeable
+    domain_flavors: ["cew_series"]
+    examples: [4.3]
+    passive: true
+
+relationships:
+  - name: "appears_in_cew_series"
+    description: "Links a real-world contextual entity (a US geographic area or a NAICS industry) to a QCEW time series whose area or industry dimension is that entity."
+    display_name: "Appears in QCEW Series"
+    mergeability: not_mergeable
+    domain_flavors: ["location", "industry"]
+    target_flavors: ["cew_series"]
+    passive: true
+
+attributes: []

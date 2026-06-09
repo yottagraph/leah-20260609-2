@@ -1,0 +1,1235 @@
+# Dataset schema for IAPD (SEC Investment Adviser Public Disclosure).
+#
+# This schema describes entity types, properties, and relationships produced
+# by atomizing the IAPD Form ADV Part 1A daily XML compilation feeds:
+#
+#   - IA_FIRM_SEC_Feed_*.xml.gz   — SEC-registered RIAs + Exempt Reporting
+#                                   Advisers. Source name: "iapd_sec".
+#   - IA_FIRM_STATE_Feed_*.xml.gz — State-registered Investment Advisers.
+#                                   Source name: "iapd_state".
+#
+# Both feeds emit the same entity types. crd_number is the canonical
+# strong ID — chosen to align with the cross-source convention (edgar
+# also uses an unprefixed crd_number on its organization flavor), so
+# IAPD firms and EDGAR registrants collapse to one entity per CRD.
+# sec_file_number is a secondary strong ID for SEC-feed firms.
+# company_cik and lei are declared as strong-ID slots so the slots
+# exist when downstream cross-walks (Form ADV Schedule R, third-party
+# CRD↔LEI mappings) start populating them — adding strong-ID slots
+# later is a breaking schema change.
+#
+# Scope: Form ADV Part 1A only. Part 1B (state addenda), Part 2 (brochures),
+# and Part 3 (CRS) are per-firm PDFs not in the bulk feed; they are
+# deferred to a future iteration.
+name: "iapd"
+description: "SEC Investment Adviser Public Disclosure (IAPD) Form ADV Part 1A data for SEC-registered Registered Investment Advisers, Exempt Reporting Advisers, and state-registered Investment Advisers, sourced from the daily IAPD compilation XML feeds"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    # Property-name alignment matters: strong-ID matches key on
+    # (flavor, property, value), so crd_number / sec_file_number /
+    # company_cik / lei here match the same-named strong-IDs on
+    # edgar's organization flavor and gleif's organization flavor.
+    strong_id_properties: ["crd_number", "sec_file_number", "company_cik", "lei"]
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["New York City", "San Francisco", "North America", "Bakery Square"]
+    passive: true
+
+  - name: "private_fund"
+    description: "A private investment fund (hedge fund, private equity, venture capital, real estate, or other pooled investment vehicle) reported by an SEC-registered investment adviser on Form ADV Schedule D Section 7.B(1). Identified by its SEC-assigned fund ID (e.g. 805-XXXXXXXX); strong-ID-resolvable across monthly filings"
+    display_name: "Private Fund"
+    mergeability: not_mergeable
+    strong_id_properties: ["sec_fund_id"]
+    passive: true
+
+  - name: "person"
+    description: "An individual person reported on Form ADV — typically a direct or indirect owner (Schedule A/B), an executive officer, a control person, or a DRP-affiliated individual. Identified by person_crd (FINRA-issued individual identifier) when available; otherwise resolved by name within an adviser context"
+    display_name: "Person"
+    mergeability: not_mergeable
+    strong_id_properties: ["person_crd"]
+    passive: true
+
+properties:
+  # --- Identity and Registration ---
+
+  - name: "crd_number"
+    type: string
+    description: "FINRA-assigned firm CRD (Central Registration Depository) number, the canonical unique identifier for SEC-registered and state-registered investment advisory firms; stable across registration status changes. Derived from the FirmCrdNb attribute on the IAPD <Firm> element. Property name is unprefixed to match edgar's organization.crd_number so an iapd firm and an edgar registrant with the same CRD resolve to the same entity"
+    display_name: "CRD Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["283882", "312360", "324069"]
+    passive: true
+
+  - name: "sec_file_number"
+    type: string
+    description: "SEC file number — registrant identifier assigned by the SEC (e.g. 801-XXXXX for advisers, 084-XXXXX for funds). For IAPD firms the 801-prefix denotes a fully SEC-registered Registered Investment Adviser and the 802-prefix denotes an Exempt Reporting Adviser; derived from the SECNb attribute on the IAPD <Firm> element (SEC feed only). Promoted to a strong-ID on organization so iapd firms cross-resolve with edgar registrants by SEC file number when CRD is missing on one side"
+    display_name: "SEC File Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["801-135399", "802-120553"]
+    passive: true
+
+  - name: "company_cik"
+    type: string
+    description: "SEC Central Index Key (CIK) assigned by EDGAR to entities that file with the SEC. Property name matches edgar's organization.company_cik so iapd firms that also file via EDGAR (e.g. publicly-traded asset managers, fund advisers) cross-resolve to the same organization entity. Not present in the IAPD bulk XML — the slot is declared so downstream CRD↔CIK cross-walks (Form ADV Schedule R or third-party feeds) can populate it without a breaking schema change"
+    display_name: "Company CIK"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["1234567"]
+    passive: true
+
+  - name: "lei"
+    type: string
+    description: "Legal Entity Identifier — 20-character ISO 17442 code globally identifying a legal entity. Property name matches gleif's organization.lei and edgar's organization.lei so iapd firms cross-resolve to GLEIF and EDGAR records by LEI. Not present in the IAPD bulk Part 1A XML — the slot is declared so per-firm IAPD detail XML (Schedule R) or third-party cross-walks can populate it without a breaking schema change"
+    display_name: "LEI"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["549300LQQAVPLATTSU38"]
+    passive: true
+
+  - name: "primary_business_name"
+    type: string
+    description: "Primary business name under which the firm conducts advisory business; may differ from the legal name when the firm operates under a trade name or DBA. Derived from the BusNm attribute on the IAPD <Firm> element"
+    display_name: "Primary Business Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["RABENOLD ADVISORS, INC.", "MK CAPITAL"]
+    passive: true
+
+  - name: "legal_name"
+    type: string
+    description: "Firm's full legal name as registered with regulators; derived from the LegalNm attribute on the IAPD <Firm> element"
+    display_name: "Legal Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["RABENOLD ADVISORS, INC.", "MK CAPITAL COMPANY"]
+    passive: true
+
+  - name: "is_umbrella_registration"
+    type: string
+    description: "String-encoded boolean (\"true\"/\"false\") indicating whether this Form ADV filing represents an umbrella registration covering multiple filing-adviser/relying-adviser entities under a single filing. Derived from the UmbrRgstn attribute on the IAPD <Firm> element"
+    display_name: "Umbrella Registration"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "sec_region_code"
+    type: string
+    description: "SEC regional office code with supervisory jurisdiction over the firm. Derived from the SECRgnCD attribute on the IAPD <Firm> element (SEC-registered firms only)"
+    display_name: "SEC Region Code"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["NYRO", "CHRO", "LARO"]
+    passive: true
+
+  - name: "firm_registration_type"
+    type: string
+    description: "Firm's registration disposition with the SEC. \"Registered\" denotes a fully SEC-registered Registered Investment Adviser; \"ERA\" denotes an Exempt Reporting Adviser that files but is not fully registered. Derived from the Rgstn FirmType attribute on the IAPD <Firm> element (SEC feed only)"
+    display_name: "Firm Registration Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Registered", "ERA"]
+    passive: true
+
+  - name: "firm_registration_status"
+    type: string
+    description: "Status of the firm's registration with its primary securities regulator (SEC or a US state); distinct from LEI registration status. For SEC-registered firms, derived from the Rgstn St attribute. For state-registered firms, derived from the first state regulator's status under StateRgstn/Rgltrs"
+    display_name: "Firm Registration Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["APPROVED", "ACTIVE", "PENDING", "TERMINATED"]
+    passive: true
+
+  - name: "firm_registration_date"
+    type: string
+    description: "Date the firm was approved or registered by its primary securities regulator (SEC or a US state), formatted YYYY-MM-DD. Derived from the Rgstn Dt attribute (SEC feed) or the first state regulator's Dt under StateRgstn/Rgltrs (state feed)"
+    display_name: "Firm Registration Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2026-02-24", "2021-02-16"]
+    passive: true
+
+  - name: "notice_filed_state_count"
+    type: float
+    description: "Number of US states where the SEC-registered firm has filed notice filings; counts <States> elements under <NoticeFiled> on the IAPD <Firm> element (SEC feed only)"
+    display_name: "Notice-Filed State Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "state_registration_count"
+    type: float
+    description: "Number of US state and territorial securities regulators with which the firm is state-registered; counts <Rgltr> elements under StateRgstn/Rgltrs on the IAPD <Firm> element (state feed only)"
+    display_name: "State Registration Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "latest_filing_date"
+    type: string
+    description: "Date of the most recent Form ADV filing represented in this IAPD snapshot, formatted YYYY-MM-DD. Derived from the Filing Dt attribute on the <Firm> element; also used as the record-level timestamp because it bounds the freshness of the Form ADV data"
+    display_name: "Latest Form ADV Filing Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2026-03-04", "2025-08-01"]
+    passive: true
+
+  - name: "form_adv_version"
+    type: string
+    description: "Version label of the Form ADV template used for the firm's most recent filing. Derived from the Filing FormVrsn attribute on the <Firm> element"
+    display_name: "Form ADV Version"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["10/2021"]
+    passive: true
+
+  # --- Address and Contact ---
+
+  - name: "physical_address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Physical Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["5930 MAIN STREET, SUITE 400, WILLIAMSVILLE, NY 14221, United States"]
+    passive: true
+
+  - name: "mailing_address"
+    type: string
+    description: "Mailing address as formatted string"
+    display_name: "Mailing Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["PO BOX 1234, ALBANY, NY 12201, United States"]
+    passive: true
+
+  - name: "main_phone_number"
+    type: string
+    description: "Main office phone number as published by the firm; not normalized. Derived from the MainAddr PhNb attribute on the <Firm> element"
+    display_name: "Main Phone Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["716-568-8790", "6033037688"]
+    passive: true
+
+  - name: "main_fax_number"
+    type: string
+    description: "Main office fax number as published by the firm. Derived from the MainAddr FaxNb attribute on the <Firm> element; often missing"
+    display_name: "Main Fax Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["716-568-8791"]
+    passive: true
+
+  - name: "website"
+    type: string
+    description: "Primary website URL of the institution, derived from the WEBADDR field; omitted when blank"
+    display_name: "Website"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["http://www.rabenoldadvisors.com", "https://www.mkcapital.com/"]
+    passive: true
+
+  # --- Organization Form ---
+
+  - name: "organization_form"
+    type: string
+    description: "Legal organization form of the firm as reported on Form ADV Item 3A. Derived from the Item3A OrgFormNm attribute"
+    display_name: "Organization Form"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Corporation", "Limited Partnership", "Limited Liability Company", "Sole Proprietorship"]
+    passive: true
+
+  - name: "fiscal_year_end_month"
+    type: string
+    description: "Month in which the firm's fiscal year ends, as reported on Form ADV Item 3B. Derived from the Item3B Q3B attribute"
+    display_name: "Fiscal Year End Month"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["DECEMBER", "JUNE"]
+    passive: true
+
+  - name: "state_of_formation"
+    type: string
+    description: "US state (2-letter code) or non-US country in which the firm was organized, as reported on Form ADV Item 3C. Derived from Item3C StateCD when inside the US, otherwise CntryNm"
+    display_name: "State of Formation"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["NY", "DE", "IL"]
+    passive: true
+
+  - name: "country_of_formation"
+    type: string
+    description: "Country in which the firm was organized, as reported on Form ADV Item 3C. Derived from the Item3C CntryNm attribute"
+    display_name: "Country of Formation"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["United States", "Cayman Islands"]
+    passive: true
+
+  # --- Employees and Clients ---
+
+  - name: "total_employees"
+    type: float
+    description: "Total number of employees worldwide as of the firm's most recent fiscal year-end; from Form ADV Item 5A. Derived from the Item5A TtlEmp attribute"
+    display_name: "Total Employees"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "employees_providing_investment_advice"
+    type: float
+    description: "Number of employees who perform investment-advisory functions including research; from Form ADV Item 5B(1). Derived from the Item5B Q5B1 attribute"
+    display_name: "Employees Providing Investment Advice"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "client_count_band"
+    type: string
+    description: "Coarse band for the firm's total number of advisory clients; the SEC publishes a band rather than an exact count for privacy. From Form ADV Item 5H. Derived from the Item5H Q5H attribute"
+    display_name: "Client Count Band"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1-10", "11-25", "26-100", "51-100", "101-250", "251-500", "More than 500"]
+    passive: true
+
+  # --- Assets Under Management ---
+
+  - name: "assets_under_management"
+    type: float
+    description: "Total regulatory assets under management (RAUM) reported on Form ADV Item 5F(2)(c), in USD; the sum of discretionary and non-discretionary RAUM. Derived from the Item5F Q5F2C attribute"
+    display_name: "Assets Under Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "discretionary_assets_under_management"
+    type: float
+    description: "Regulatory assets under management for which the firm has discretionary authority, in USD; from Form ADV Item 5F(2)(a). Derived from the Item5F Q5F2A attribute"
+    display_name: "Discretionary Assets Under Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "non_discretionary_assets_under_management"
+    type: float
+    description: "Regulatory assets under management for which the firm advises without discretionary authority, in USD; from Form ADV Item 5F(2)(b). Derived from the Item5F Q5F2B attribute"
+    display_name: "Non-Discretionary Assets Under Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "non_us_assets_under_management"
+    type: float
+    description: "Portion of regulatory assets under management attributable to non-US clients, in USD; from Form ADV Item 5F(3). Derived from the Item5F Q5F3 attribute"
+    display_name: "Non-US Assets Under Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "discretionary_account_count"
+    type: float
+    description: "Number of discretionary advisory accounts; from Form ADV Item 5F(2)(d). Derived from the Item5F Q5F2D attribute"
+    display_name: "Discretionary Account Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "non_discretionary_account_count"
+    type: float
+    description: "Number of non-discretionary advisory accounts; from Form ADV Item 5F(2)(e). Derived from the Item5F Q5F2E attribute"
+    display_name: "Non-Discretionary Account Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "total_account_count"
+    type: float
+    description: "Total number of advisory accounts; from Form ADV Item 5F(2)(f). Derived from the Item5F Q5F2F attribute"
+    display_name: "Total Account Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  # --- Advisory Services (emitted only when firm answered Y on Form ADV Item 5G) ---
+
+  - name: "provides_financial_planning_services"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm provides financial planning services; from Form ADV Item 5G(1). The atom is emitted ONLY when the firm answered Y (i.e. value is always \"true\" when present); an absent atom means the firm answered N or left it blank. Derived from the Item5G Q5G1 attribute"
+    display_name: "Provides Financial Planning Services"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_individual_portfolio_management"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm manages portfolios for individuals (other than high-net-worth individuals); from Form ADV Item 5G(2). Emitted only when true. Derived from the Item5G Q5G2 attribute"
+    display_name: "Provides Individual Portfolio Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_institutional_portfolio_management"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm manages portfolios for institutional clients; from Form ADV Item 5G(5). Emitted only when true. Derived from the Item5G Q5G5 attribute"
+    display_name: "Provides Institutional Portfolio Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_pooled_vehicle_portfolio_management"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm manages portfolios for pooled investment vehicles (registered investment companies and/or unregistered pooled vehicles such as hedge funds); from Form ADV Items 5G(3) and 5G(4). Emitted only when true on either subitem. Derived from the Item5G Q5G3 or Q5G4 attribute"
+    display_name: "Provides Pooled Vehicle Portfolio Management"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_pension_consulting_services"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm provides pension consulting services; from Form ADV Item 5G(8). Emitted only when true. Derived from the Item5G Q5G8 attribute"
+    display_name: "Provides Pension Consulting Services"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_selection_of_other_advisers"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm selects other investment advisers on behalf of its clients (including via wrap programs); from Form ADV Item 5G(9). Emitted only when true. Derived from the Item5G Q5G9 attribute"
+    display_name: "Provides Selection of Other Advisers"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_market_timing_services"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm offers market-timing services; from Form ADV Item 5G(10). Emitted only when true. Derived from the Item5G Q5G10 attribute"
+    display_name: "Provides Market Timing Services"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_security_ratings_services"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm provides securities ratings or pricing services; from Form ADV Item 5G(11). Emitted only when true. Derived from the Item5G Q5G11 attribute"
+    display_name: "Provides Security Ratings Services"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "provides_other_advisory_services"
+    type: string
+    description: "String-encoded boolean (\"true\") indicating that the firm provides other advisory services not specifically enumerated on Form ADV Item 5G; from Item 5G(12). Emitted only when true. Derived from the Item5G Q5G12 attribute. The free-form description (when present) is captured in the other_advisory_services_description property"
+    display_name: "Provides Other Advisory Services"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true"]
+    passive: true
+
+  - name: "other_advisory_services_description"
+    type: string
+    description: "Free-text description of the \"other\" advisory services the firm offers when provides_other_advisory_services is true; from Form ADV Item 5G(12) freeform field. Derived from the Item5G Q5G12Oth attribute"
+    display_name: "Other Advisory Services Description"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["NEGOTIATED FINANCIAL PLANNING FEE", "INVESTMENT RESEARCH AND SECURITIES ANALYSIS"]
+    passive: true
+
+  # --- Wrap Fee Programs ---
+
+  - name: "is_wrap_fee_program_sponsor"
+    type: string
+    description: "String-encoded boolean (\"true\"/\"false\") indicating whether the firm sponsors a wrap fee program (a program that bundles advisory, brokerage, custody, and other services for a single fee); from Form ADV Item 5I(1). Derived from the Item5I Q5I1 attribute"
+    display_name: "Wrap Fee Program Sponsor"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "wrap_fee_sponsor_assets"
+    type: float
+    description: "Total assets in wrap fee programs the firm sponsors, in USD; from Form ADV Item 5I(2)(a). Derived from the Item5I Q5I2A attribute"
+    display_name: "Wrap Fee Sponsor Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "wrap_fee_portfolio_assets"
+    type: float
+    description: "Total assets in wrap fee programs for which the firm acts as portfolio manager, in USD; from Form ADV Item 5I(2)(b). Derived from the Item5I Q5I2B attribute"
+    display_name: "Wrap Fee Portfolio Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  # --- Disciplinary Disclosures (rollups only; per-item DRP detail not in bulk feed) ---
+
+  - name: "has_disciplinary_disclosure"
+    type: string
+    description: "String-encoded boolean rollup (\"true\"/\"false\") indicating that the firm or any of its advisory affiliates has answered Yes to at least one question in Form ADV Item 11 (criminal, regulatory, civil, or bankruptcy). False means clean across all Item 11 subquestions. Derived from the Item11 Q11 attribute"
+    display_name: "Has Disciplinary Disclosure"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "has_criminal_disclosure"
+    type: string
+    description: "String-encoded boolean rollup (\"true\"/\"false\") of Form ADV Item 11A indicating whether the firm or an advisory affiliate has a criminal conviction or pending criminal charge. Derived from logical-OR of the Item11A Q11A1 and Q11A2 attributes"
+    display_name: "Has Criminal Disclosure"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "has_regulatory_action_disclosure"
+    type: string
+    description: "String-encoded boolean rollup (\"true\"/\"false\") of Form ADV Items 11B-11E indicating whether the firm or an advisory affiliate has been the subject of any regulatory action by the SEC, CFTC, another federal regulator, a state regulator, a foreign regulator, or a self-regulatory organization. Derived from logical-OR of all Q11B*/Q11C*/Q11D*/Q11E* attributes"
+    display_name: "Has Regulatory Action Disclosure"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "active_through_date"
+    type: string
+    description: "Earliest date by which this firm is no longer guaranteed to still be in the IAPD daily feed. Set to the snapshot date plus one day on every AtomizeFirm record; bumps daily as long as the firm continues to appear in the feed and freezes when the firm drops off (presumed withdrawn or transitioned to a different regulator). Downstream consumers can detect withdrawal by checking whether today exceeds this date by more than the feed's expected lag (≈7-14 days)"
+    display_name: "Active Through Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2026-05-29", "2026-05-30"]
+    passive: true
+
+  # --- Private Fund Identity (Schedule D 7.B(1)) ---
+
+  - name: "sec_fund_id"
+    type: string
+    description: "SEC-assigned identifier for a private fund reported on Form ADV Schedule D Section 7.B(1) (e.g. 805-XXXXXXXX). Canonical strong ID for the private_fund flavor, stable across monthly filings and across changes to the fund's adviser-of-record. Derived from the \"Fund ID\" column of the IA_Schedule_D_7B1 CSV table"
+    display_name: "SEC Fund ID"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["805-12345678", "805-87654321"]
+    passive: true
+
+  - name: "fund_name"
+    type: string
+    description: "Legal name of the private fund as reported on Form ADV Schedule D Section 7.B(1). Derived from the \"Fund Name\" column"
+    display_name: "Fund Name"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["HANSABEL INCOME, L.P.", "Acme Capital Master Fund"]
+    passive: true
+
+  - name: "fund_type"
+    type: string
+    description: "Fund classification per Form ADV Schedule D Section 7.B(1) Item 10 (Hedge Fund, Private Equity Fund, Venture Capital Fund, Real Estate Fund, Securitized Asset Fund, Liquidity Fund, Other Private Fund). Derived from \"Fund Type\" with fallback to \"Fund Type Other\""
+    display_name: "Fund Type"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["Hedge Fund", "Private Equity Fund", "Venture Capital Fund", "Real Estate Fund"]
+    passive: true
+
+  - name: "gross_asset_value"
+    type: float
+    description: "Gross asset value of the private fund in USD as reported on Form ADV Schedule D Section 7.B(1) Item 11. Derived from the \"Gross Asset Value\" column"
+    display_name: "Gross Asset Value (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["1000000000", "250000000"]
+    passive: true
+
+  - name: "minimum_investment"
+    type: float
+    description: "Minimum investment commitment required of investors in the private fund in USD, per Form ADV Schedule D Section 7.B(1) Item 13. Derived from the \"Minimum Investment\" column"
+    display_name: "Minimum Investment (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["1000000", "250000", "100000"]
+    passive: true
+
+  - name: "beneficial_owners"
+    type: float
+    description: "Approximate number of beneficial owners of the private fund per Form ADV Schedule D Section 7.B(1) Item 14. Derived from the \"Owners\" column"
+    display_name: "Beneficial Owners"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["25", "100", "500"]
+    passive: true
+
+  - name: "pct_owned_non_us"
+    type: float
+    description: "Approximate percentage of the private fund's beneficial owners that are non-United States persons per Form ADV Schedule D Section 7.B(1) Item 15. Derived from the \"%Owned Non-US\" column"
+    display_name: "% Owned Non-US"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["0", "25", "75"]
+    passive: true
+
+  - name: "jurisdiction_state"
+    type: string
+    description: "US state of organization for the private fund as reported on Form ADV Schedule D Section 7.B(1). Derived from the \"State\" column; empty for funds organized outside the US"
+    display_name: "Jurisdiction (State)"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["DE", "NY", "CA"]
+    passive: true
+
+  - name: "jurisdiction_country"
+    type: string
+    description: "Country of organization for the private fund as reported on Form ADV Schedule D Section 7.B(1). Derived from the \"Country\" column"
+    display_name: "Jurisdiction (Country)"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["United States", "Cayman Islands", "Luxembourg", "Ireland"]
+    passive: true
+
+  - name: "is_master_fund"
+    type: float
+    description: "0.0/1.0 flag indicating whether the private fund is a master fund in a master-feeder structure, per Form ADV Schedule D Section 7.B(1). Derived from the \"Master Fund\" Y/N column"
+    display_name: "Is Master Fund"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "is_feeder_fund"
+    type: float
+    description: "0.0/1.0 flag indicating whether the private fund is a feeder fund into a master fund, per Form ADV Schedule D Section 7.B(1). Derived from the \"Feeder Fund\" Y/N column"
+    display_name: "Is Feeder Fund"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "is_fund_of_funds"
+    type: float
+    description: "0.0/1.0 flag indicating whether the private fund is a fund-of-funds per Form ADV Schedule D Section 7.B(1). Derived from the \"Fund of Funds\" Y/N column"
+    display_name: "Is Fund of Funds"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "form_d_file_number"
+    type: string
+    description: "SEC Form D file number for a private fund that has filed a Form D notice, per Form ADV Schedule D Section 7.B(1) Item 22. Derived from the \"Form D File Number\" column of the IA_Schedule_D_7B1A22 CSV table"
+    display_name: "Form D File Number"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    examples: ["021-123456"]
+    passive: true
+
+  # --- Asset Allocation (Item 5K(1)) ---
+
+  - name: "pct_assets_equity_listed"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in exchange-listed equity securities, per Form ADV Item 5K(1)(b)(i). Derived from the 5K(1)(b)(i) column of the IA_Schedule_D_5K1 CSV table; emitted only when the cell is non-zero"
+    display_name: "% Assets: Listed Equity"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0.5", "25", "75"]
+    passive: true
+
+  - name: "pct_assets_equity_unlisted"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in unlisted (private) equity securities, per Form ADV Item 5K(1)(b)(ii). Derived from the 5K(1)(b)(ii) column of the IA_Schedule_D_5K1 CSV table"
+    display_name: "% Assets: Unlisted Equity"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "10", "50"]
+    passive: true
+
+  - name: "pct_assets_govt_bonds"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in US government and agency bonds, per Form ADV Item 5K(1)(b)(iii). Derived from the 5K(1)(b)(iii) column"
+    display_name: "% Assets: Government Bonds"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "20", "60"]
+    passive: true
+
+  - name: "pct_assets_muni_bonds"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in US state and local bonds, per Form ADV Item 5K(1)(b)(iv). Derived from the 5K(1)(b)(iv) column"
+    display_name: "% Assets: Municipal Bonds"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "5", "30"]
+    passive: true
+
+  - name: "pct_assets_sovereign_bonds"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in non-US sovereign bonds, per Form ADV Item 5K(1)(b)(v). Derived from the 5K(1)(b)(v) column"
+    display_name: "% Assets: Sovereign Bonds"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "5", "15"]
+    passive: true
+
+  - name: "pct_assets_corp_bonds_ig"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in investment-grade corporate bonds, per Form ADV Item 5K(1)(b)(vi). Derived from the 5K(1)(b)(vi) column"
+    display_name: "% Assets: Corporate Bonds (IG)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "10", "40"]
+    passive: true
+
+  - name: "pct_assets_corp_bonds_hy"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in non-investment-grade (high-yield) corporate bonds, per Form ADV Item 5K(1)(b)(vii). Derived from the 5K(1)(b)(vii) column"
+    display_name: "% Assets: Corporate Bonds (HY)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "5", "20"]
+    passive: true
+
+  - name: "pct_assets_derivatives"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in derivatives, per Form ADV Item 5K(1)(b)(viii). Derived from the 5K(1)(b)(viii) column"
+    display_name: "% Assets: Derivatives"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "2", "15"]
+    passive: true
+
+  - name: "pct_assets_pooled_vehicles"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in pooled investment vehicles (mutual funds, ETFs, private funds), per Form ADV Item 5K(1)(b)(ix). Derived from the 5K(1)(b)(ix) column"
+    display_name: "% Assets: Pooled Vehicles"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "10", "50"]
+    passive: true
+
+  - name: "pct_assets_cash"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in cash and cash equivalents, per Form ADV Item 5K(1)(b)(x). Derived from the 5K(1)(b)(x) column"
+    display_name: "% Assets: Cash"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "5", "30"]
+    passive: true
+
+  - name: "pct_assets_real_estate"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in real estate, per Form ADV Item 5K(1)(b)(xi). Derived from the 5K(1)(b)(xi) column"
+    display_name: "% Assets: Real Estate"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "10", "50"]
+    passive: true
+
+  - name: "pct_assets_other"
+    type: float
+    description: "Percentage of an adviser's regulatory assets under management held in other asset categories not covered by the prior 11 buckets, per Form ADV Item 5K(1)(b)(xii). Derived from the 5K(1)(b)(xii) column"
+    display_name: "% Assets: Other"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "5", "20"]
+    passive: true
+
+  - name: "pct_assets_other_desc"
+    type: string
+    description: "Free-text description of the \"other\" asset category reported in pct_assets_other, per Form ADV Item 5K(1)(b)(xii) Description. Derived from the 5K(1)(b)(xii) Description column"
+    display_name: "% Assets: Other (Description)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Cryptocurrencies", "Commodities", "Insurance products"]
+    passive: true
+
+  # --- Adviser-level Form ADV Part 1A (IA_ADV_Base_A) ---
+  # These atoms come from the monthly filing-data ZIP's IA_ADV_Base_A
+  # table, which uses raw Form ADV item codes as column names. Daily
+  # XML covers similar data for currently-active SEC-registered firms;
+  # this table is the only source for ERAs and historical advisers.
+
+  - name: "clients_individuals"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has retail individual clients (Form ADV Item 5D(1)(a))"
+    display_name: "Has Individual Clients"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "clients_high_net_worth"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has high-net-worth individual clients (Form ADV Item 5D(1)(b))"
+    display_name: "Has HNW Clients"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "clients_pooled_vehicles"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has pooled-investment-vehicle clients (hedge funds, private funds, etc.; Form ADV Item 5D(1)(d))"
+    display_name: "Has Pooled Vehicle Clients"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "clients_pension_plans"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has pension/profit-sharing-plan clients (Form ADV Item 5D(1)(g))"
+    display_name: "Has Pension Plan Clients"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "clients_corporations"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has corporation / other business clients (Form ADV Item 5D(1)(k))"
+    display_name: "Has Corporate Clients"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "compensation_pct_aum"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser charges asset-based fees as a percentage of AUM (Form ADV Item 5E(1))"
+    display_name: "Charges % of AUM"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "compensation_hourly"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser charges hourly fees (Form ADV Item 5E(2))"
+    display_name: "Charges Hourly Fees"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "compensation_fixed_fees"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser charges fixed fees (Form ADV Item 5E(4))"
+    display_name: "Charges Fixed Fees"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "compensation_commissions"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser charges commissions (Form ADV Item 5E(5))"
+    display_name: "Charges Commissions"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "compensation_performance"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser charges performance-based fees (Form ADV Item 5E(6)). Common for hedge funds and PE managers"
+    display_name: "Charges Performance Fees"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "custody_client_securities"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser has custody of client securities (Form ADV Item 9A(1)(a))"
+    display_name: "Has Custody of Securities"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "acts_as_qualified_custodian"
+    type: float
+    description: "0.0/1.0 flag indicating the adviser is itself a qualified custodian for client assets (Form ADV Item 9B(1)(a))"
+    display_name: "Acts as Qualified Custodian"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "1"]
+    passive: true
+
+  - name: "regulatory_aum_discretionary"
+    type: float
+    description: "Regulatory assets under management held with discretionary authority, in USD (Form ADV Item 5F(2)(a)). Sub-component of total regulatory AUM"
+    display_name: "Regulatory AUM (Discretionary)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["100000000", "1500000000"]
+    passive: true
+
+  - name: "regulatory_aum_nondiscretionary"
+    type: float
+    description: "Regulatory assets under management held without discretionary authority, in USD (Form ADV Item 5F(2)(b))"
+    display_name: "Regulatory AUM (Non-Discretionary)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["0", "50000000"]
+    passive: true
+
+  - name: "total_accounts"
+    type: float
+    description: "Total number of regulatory accounts under management (Form ADV Item 5F(2)(f))"
+    display_name: "Total Accounts"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["10", "500", "50000"]
+    passive: true
+
+  # --- Disciplinary Disclosures (DRP tables) ---
+
+  - name: "drp_type"
+    type: string
+    description: "Disclosure Reporting Page category — \"criminal\" (IA_DRP_Criminal), \"regulatory\" (IA_DRP_Regulatory), or \"civil_judicial\" (IA_DRP_Civil_Judicial). Adviser-level disciplinary event"
+    display_name: "DRP Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["criminal", "regulatory", "civil_judicial"]
+    passive: true
+
+  - name: "drp_allegations"
+    type: string
+    description: "Free-text allegations as filed in a DRP disclosure. For regulatory and civil-judicial events this is the \"Allegations\" column; for criminal events the analogous \"Event Detail\" column populates this property"
+    display_name: "DRP Allegations"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Failed to disclose conflict of interest", "Securities fraud"]
+    passive: true
+
+  - name: "drp_status"
+    type: string
+    description: "Current status of the DRP disciplinary event (e.g. pending, final, on appeal). Derived from the \"Status\" column"
+    display_name: "DRP Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Final", "Pending", "On Appeal"]
+    passive: true
+
+  - name: "drp_resolution"
+    type: string
+    description: "Resolution / disposition of the DRP event when concluded — e.g. consented, settled, dismissed. Derived from \"Resolution\" / \"Resolution Type\" columns"
+    display_name: "DRP Resolution"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Consented", "Settled", "Dismissed"]
+    passive: true
+
+  - name: "drp_sanctions"
+    type: string
+    description: "Principal sanction imposed for a regulatory DRP event. Derived from the \"Principal Sanction\" column; empty for criminal/civil-judicial DRPs"
+    display_name: "DRP Sanctions"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Fine", "Censure", "Suspension"]
+    passive: true
+
+  - name: "drp_date"
+    type: string
+    description: "Date the DRP event was initiated, charged, or filed (YYYY-MM-DD). Derived from the type-specific date column (Date Initiated for regulatory, Date First Charged for criminal, Filing Date for civil-judicial), normalized to YYYY-MM-DD"
+    display_name: "DRP Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2018-04-15", "2022-09-30"]
+    passive: true
+
+  - name: "drp_summary"
+    type: string
+    description: "Free-text summary of the DRP event. Derived from the \"Summary\" column"
+    display_name: "DRP Summary"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Adviser settled SEC enforcement action regarding misallocation of fund expenses"]
+    passive: true
+
+  # --- ADV-W Withdrawal Filings ---
+
+  - name: "sec_registration_status"
+    type: string
+    description: "SEC-side registration status of an investment adviser firm. Set to \"Withdrawn\" on Form ADV-W records so the resolver's latest-atom-wins behavior reflects the firm's terminal state. Distinct from firm_registration_status (which is the primary regulator's status from the daily XML feed and can be a state regulator's value for state-registered firms)"
+    display_name: "SEC Registration Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Withdrawn"]
+    passive: true
+
+  - name: "withdrawal_date"
+    type: string
+    description: "Date Form ADV-W was filed, normalized to YYYY-MM-DD. Derived from the \"Filing Date\" column of the ADVW_W2 CSV"
+    display_name: "Withdrawal Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2023-06-30", "2024-12-15"]
+    passive: true
+
+  - name: "withdrawal_type"
+    type: string
+    description: "Form ADV-W filing type — \"FULL\" (complete withdrawal from SEC registration) or \"PARTIAL\". Derived from the \"Filing Type\" column"
+    display_name: "Withdrawal Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["FULL", "PARTIAL"]
+    passive: true
+
+  - name: "total_assets_at_withdrawal"
+    type: float
+    description: "Total assets reported on Form ADV-W at the time of withdrawal, in USD. Derived from the \"Assets Total Assets\" column of the ADVW_W2 CSV. Distinct from FDIC's bank-level total_assets (call-report balance sheet) and SEC's filing-level total_assets — those are point-in-time balance-sheet figures for active entities, while this is the closing balance at the moment an adviser terminated SEC registration"
+    display_name: "Total Assets at Withdrawal (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["50000000", "1500000000"]
+    passive: true
+
+  - name: "total_shareholder_equity"
+    type: float
+    description: "Total shareholder equity reported on Form ADV-W at the time of withdrawal, in USD. Derived from the \"Total Shareholder Equity\" column"
+    display_name: "Total Shareholder Equity at Withdrawal (USD)"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["10000000", "250000000"]
+    passive: true
+
+  # --- Person Identity (Schedule A/B + DRP affiliates) ---
+
+  - name: "person_crd"
+    type: string
+    description: "FINRA-assigned CRD number for an individual person (officer, principal, control person, DRP-affiliated individual). Distinct from organization CRD; persists across firm changes for the same individual. Property name aligns with the convention used by FINRA BrokerCheck and downstream cross-source person resolution"
+    display_name: "Person CRD"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["1234567", "9876543"]
+    passive: true
+
+  - name: "person_title"
+    type: string
+    description: "Title or status of an individual person at an investment adviser firm, per Form ADV Schedule A/B \"Title or Status\" column. Emitted only on person-flavored owner records; common values include officer titles and ownership/control role labels"
+    display_name: "Person Title"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["CHIEF EXECUTIVE OFFICER", "PRESIDENT", "MEMBER", "DIRECTOR", "PRINCIPAL"]
+    passive: true
+
+relationships:
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["location"]
+    examples: ["Rabenold Advisors, Inc. is located at Williamsville, NY"]
+    passive: true
+
+  # --- Private Fund Relationships (Schedule D 7.B(1)) ---
+
+  - name: "advised_by"
+    description: "A private fund is managed by an investment adviser (the primary adviser-of-record on Form ADV Schedule D Section 7.B(1))"
+    display_name: "Advised By"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["HANSABEL INCOME, L.P. is advised by Acme Capital Management"]
+    passive: true
+
+  - name: "co_advised_by"
+    description: "A private fund is co-advised by an additional investment adviser (Schedule D 7.B(1) Item 17b)"
+    display_name: "Co-Advised By"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["A fund is co-advised by a related adviser"]
+    passive: true
+
+  - name: "sub_advised_by"
+    description: "A private fund is sub-advised by another investment adviser delegated specific portfolio management responsibilities (Schedule D 7.B(1) Item 18b)"
+    display_name: "Sub-Advised By"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["A fund delegates strategy to a sub-adviser"]
+    passive: true
+
+  - name: "master_fund_of"
+    description: "A private fund is the master fund into which one or more feeder funds are pooled (Schedule D 7.B(1) Master Fund ID/Name fields)"
+    display_name: "Master Fund Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["private_fund"]
+    examples: ["A feeder fund references its master fund"]
+    passive: true
+
+  - name: "has_sub_fund"
+    description: "A private fund has beneficial ownership of a sub-fund disclosed on Schedule D 7.B(1) Item 7"
+    display_name: "Has Sub-Fund"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["private_fund"]
+    examples: ["A fund-of-funds holds a sub-fund"]
+    passive: true
+
+  - name: "feeds_into"
+    description: "A feeder private fund channels investor capital into the linked fund per Schedule D 7.B(1) Item 6b"
+    display_name: "Feeds Into"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["private_fund"]
+    examples: ["A feeder fund feeds into the linked master fund"]
+    passive: true
+
+  - name: "general_partner_of"
+    description: "An organization (typically a general partner LLC or managing member) acts as the general partner of a private fund per Schedule D 7.B(1) Item 7d1"
+    display_name: "General Partner Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["A GP LLC is the general partner of the fund"]
+    passive: true
+
+  - name: "named_partner_of"
+    description: "A named partner or principal of the private fund as reported on Schedule D 7.B(1) Item 3a"
+    display_name: "Named Partner Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["A founding partner of the fund"]
+    passive: true
+
+  - name: "marketer_of"
+    description: "A marketer or solicitor that markets the private fund to investors, per Schedule D 7.B(1) Item 28"
+    display_name: "Marketer Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["A placement agent markets the fund"]
+    passive: true
+
+  - name: "prime_broker_of"
+    description: "The prime broker providing financing and execution services to the private fund, per Schedule D 7.B(1) Item 24"
+    display_name: "Prime Broker Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["Goldman Sachs is the prime broker of the fund"]
+    passive: true
+
+  - name: "custodian_of"
+    description: "The custodian holding the private fund's assets, per Schedule D 7.B(1) Item 25"
+    display_name: "Custodian Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["State Street is the custodian of the fund"]
+    passive: true
+
+  - name: "auditor_of"
+    description: "The auditing firm performing the private fund's annual audit, per Schedule D 7.B(1) Item 23"
+    display_name: "Auditor Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["Ernst & Young audits the fund"]
+    passive: true
+
+  - name: "administrator_of"
+    description: "The fund administrator handling investor accounting and reporting for the private fund, per Schedule D 7.B(1) Item 26"
+    display_name: "Administrator Of"
+    mergeability: not_mergeable
+    domain_flavors: ["private_fund"]
+    target_flavors: ["organization"]
+    examples: ["SS&C GlobeOp is the administrator of the fund"]
+    passive: true
+
+  # --- Adviser-Level Custody (Item 5K(3)) ---
+
+  - name: "primary_custodian"
+    description: "An investment adviser's primary custodian holding client assets, per Form ADV Item 5K(3). The custodian is an organization (custody bank or qualified broker-dealer); strong-IDs preserve CRD and SEC file number for cross-source resolution"
+    display_name: "Primary Custodian"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Acme Capital Management uses State Street as its primary custodian"]
+    passive: true
+
+  # --- Ownership, Control, and Affiliation Graph ---
+
+  - name: "owner_of"
+    description: "A person or organization is a direct (Schedule A) or indirect (Schedule B) owner of an investment adviser firm. Direction is owner → adviser; the schedule and ownership code are preserved in the source row's citation"
+    display_name: "Owner Of"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    target_flavors: ["organization"]
+    examples: ["John Doe is an owner of Acme Capital Management", "Acme Holdings LLC is an owner of Acme Capital Management"]
+    passive: true
+
+  - name: "controlled_by"
+    description: "An investment adviser firm is controlled by a Schedule D 10B control entity (a parent organization, holding company, or other person/entity with control). Direction is adviser → control entity, matching the passive-voice convention shared with owner_of / advised_by / affiliated_with (subject is the entity being acted upon). CIK is carried on the control entity target when the SEC's enrichment table provides it, enabling cross-source resolution to EDGAR"
+    display_name: "Controlled By"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Acme Capital Management is controlled by Acme Holdings LLC (CIK 0001234567)"]
+    passive: true
+
+  - name: "affiliated_with"
+    description: "An investment adviser has a Schedule D 7A financial industry affiliation with another organization (e.g. broker-dealer, bank, insurance company, futures commission merchant). CIK is carried on the affiliate when available via the 7A_CIK enrichment table"
+    display_name: "Affiliated With"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Acme Capital Management is affiliated with Acme Securities LLC"]
+    passive: true
+
+  - name: "successor_to"
+    description: "An investment adviser acquired or succeeded another firm, per Form ADV Schedule D Item 4. Direction: successor (subject) → acquired firm (target). Captures M&A continuity so the acquired firm's historical records can be linked to the acquirer's go-forward records. Property name aligned with bny.successor_to for cross-source consistency"
+    display_name: "Successor To"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Acme Capital is successor to Beta Advisors after 2023 acquisition"]
+    passive: true
+
+  - name: "related_to"
+    description: "An investment adviser is related to another SEC-registered investment adviser, per Form ADV Schedule D 2A_Related. Typical for sibling firms under a common holding company or family of advisers. Distinct from affiliated_with (Schedule D 7A) which captures broader financial-industry affiliations across regulatory categories"
+    display_name: "Related To"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Acme Capital is related to Acme Wealth Management"]
+    passive: true
+
+  - name: "drp_affiliate"
+    description: "A specific named affiliate — either an individual (officer, principal, control person) or an affiliated firm — is named on a DRP disciplinary disclosure filed by an investment adviser, per IA_DRP_Advisory_Affiliates. Provides the per-affiliate grain that the DRP records themselves lack. Direction: adviser → affiliate. Target flavor follows the row's Affiliate Type: Individual rows resolve as persons (carrying person_crd when known); Firm rows resolve as organizations (carrying crd_number when known)."
+    display_name: "DRP Affiliate"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["person", "organization"]
+    examples: ["The 2018 regulatory DRP filed by Acme Capital names Jane Doe as the affiliated individual", "The 2021 regulatory DRP filed by Acme Capital names its affiliated broker-dealer Acme Securities LLC"]
+    passive: true

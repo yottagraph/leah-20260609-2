@@ -1,0 +1,685 @@
+# Dataset schema for sanctions data (OpenSanctions).
+#
+# This schema describes entity types, properties, and relationships produced
+# by atomizing structured JSON from the OpenSanctions aggregated dataset.
+# All elements are passive — they are created by the atomizer from parsed
+# JSON fields, not by LLM extraction.
+name: "sanctions"
+description: "Sanctioned persons, organizations, and their associated sanctions programs from the OpenSanctions aggregated dataset"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "legal_entity"
+    description: "An entity with legal personality whose type (person vs organization) is unknown in the source data, common in leak-derived datasets like ICIJ Offshore Leaks"
+    display_name: "Legal Entity"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "sanction_program"
+    description: "A government or international sanctions program under which entities are designated"
+    display_name: "Sanction Program"
+    mergeability: not_mergeable
+    strong_id_properties: ["program_id"]
+    passive: true
+
+  - name: "ship"
+    description: "A vessel (boat or ship) identified in sanctions designations"
+    display_name: "Vessel"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "aircraft"
+    description: "An aircraft such as a plane, helicopter, glider, or unmanned aerial vehicle"
+    display_name: "Aircraft"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "financial_instrument"
+    description: "A specific asset that can be traded, such as a stock, ETF, bond, CD, or fund. Companies are organizations, NOT financial instruments. Specific currency amounts are NOT financial instruments."
+    display_name: "Security"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id", "cusip_number", "isin"]
+    passive: true
+
+  - name: "crypto_wallet"
+    description: "A cryptocurrency wallet address identified in sanctions designations"
+    display_name: "Crypto Wallet"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id", "public_key"]
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Address"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "political_position"
+    description: "A political office or government position held by a PEP"
+    display_name: "Political Position"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "physical_asset"
+    description: "A physical asset such as real estate or business property linked to a sanctioned person"
+    display_name: "Physical Asset"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "article"
+    description: "A news article or press release being processed"
+    display_name: "Article"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+  - name: "identity_document"
+    description: "An identity document (passport, national ID) linked to a sanctioned person"
+    display_name: "Identity Document"
+    mergeability: not_mergeable
+    strong_id_properties: ["sanctions_id"]
+    passive: true
+
+properties:
+  - name: "sanctions_id"
+    type: string
+    description: "Unique identifier assigned to this entity by the upstream sanctions data provider (OpenSanctions entity ID)"
+    display_name: "Sanctions ID"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "location", "political_position", "physical_asset", "article", "identity_document"]
+    examples: ["ch-seco-94982", "us-ofac-12345"]
+    passive: true
+
+  - name: "name"
+    type: string
+    description: "Display name of the entity"
+    display_name: "Name"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "sanction_program", "ship", "aircraft", "financial_instrument", "crypto_wallet", "location", "political_position", "physical_asset", "article"]
+    examples: ["Zhongheng Lin", "Vladimir Putin"]
+    passive: true
+
+  - name: "alias"
+    type: string
+    description: "An alternative name or spelling for this entity, one atom per alias"
+    display_name: "Alias"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet"]
+    passive: true
+
+  - name: "birth_date"
+    type: string
+    description: "Date of birth as reported in the sanctions listing, in ISO 8601 format"
+    display_name: "Birth Date"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["1958-01-06", "1952-10-07"]
+    passive: true
+
+  - name: "nationality"
+    type: string
+    description: "Nationality or country affiliation as a two-letter ISO country code, falling back to the country field when nationality is not specified"
+    display_name: "Nationality"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["cn", "ru", "us"]
+    passive: true
+
+  - name: "position"
+    type: string
+    description: "Job title, political role, or official position as stated in the sanctions listing"
+    display_name: "Position"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["President of Russia", "Owner of Shenzhen Biguang Technology"]
+    passive: true
+
+  - name: "sanctions_topic"
+    type: string
+    description: "Classification tag indicating the type of sanctions designation, one atom per topic"
+    display_name: "Sanctions Topic"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet"]
+    examples: ["sanction", "poi", "debarment", "entity.associate"]
+    passive: true
+
+  - name: "notes"
+    type: string
+    description: "Descriptive notes or commentary associated with the entity"
+    display_name: "Notes"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "physical_asset", "crypto_wallet"]
+    passive: true
+
+  - name: "sanction_source_url"
+    type: string
+    description: "URL of the original source document for this sanctions listing, one atom per URL"
+    display_name: "Sanction Source URL"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "article"]
+    examples: ["https://www.federalreserve.gov/boarddocs/press/enforcement/2005/20050607/default.htm"]
+    passive: true
+
+  - name: "sanction_start_date"
+    type: string
+    description: "ISO 8601 date when this entity first appeared in the sanctions dataset (from OpenSanctions first_seen)"
+    display_name: "Sanction Start Date"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "political_position", "location", "article"]
+    examples: ["2022-02-25", "2023-06-14"]
+    passive: true
+
+  - name: "sanction_end_date"
+    type: string
+    description: "ISO 8601 date when this entity was removed from the sanctions dataset; absent while actively sanctioned"
+    display_name: "Sanction End Date"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet"]
+    examples: ["2026-04-06"]
+    passive: true
+
+  - name: "last_fetched"
+    type: string
+    description: "ISO 8601 date of the last dataset snapshot in which this entity or relationship was present"
+    display_name: "Last Fetched"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "physical_asset", "political_position", "location", "article"]
+    examples: ["2026-04-09"]
+    passive: true
+
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "legal_entity"]
+    passive: true
+
+  - name: "sanction_sector"
+    type: string
+    description: "Business sector or industry classification of the sanctioned organization"
+    display_name: "Sanction Sector"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Energy", "Banking", "Defense"]
+    passive: true
+
+  # Vessel properties
+  - name: "imo_number"
+    type: string
+    description: "IMO number of the vessel"
+    display_name: "IMO Number"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    examples: ["IMO9553359"]
+    passive: true
+
+  - name: "mmsi"
+    type: string
+    description: "Maritime Mobile Service Identity of the vessel"
+    display_name: "MMSI"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    passive: true
+
+  - name: "callsign"
+    type: string
+    description: "Radio call sign of the vessel"
+    display_name: "Call Sign"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    passive: true
+
+  - name: "shipAndCargoType"
+    type: string
+    description: "Type classification of the vessel"
+    display_name: "Ship / Cargo Type"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    examples: ["General cargo/multipurpose", "Oil tanker"]
+    passive: true
+
+  - name: "grossTonnage"
+    type: float
+    description: "Gross registered tonnage of the vessel"
+    display_name: "Gross Tonnage"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    passive: true
+
+  # Aircraft properties
+  - name: "serial_number"
+    type: string
+    description: "Manufacturer serial number of the aircraft"
+    display_name: "Serial Number"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "tailNumber"
+    type: string
+    description: "Registration number (tail number) of the aircraft"
+    display_name: "Tail Number"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "model"
+    type: string
+    description: "Aircraft model"
+    display_name: "Model"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Gulfstream 200", "Boeing 737"]
+    passive: true
+
+  # Security properties
+  - name: "isin"
+    type: string
+    description: "International Securities Identification Number (ISO 6166) uniquely identifying this financial instrument"
+    display_name: "ISIN"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "cusip_number"
+    type: string
+    description: "CUSIP identifier for the security"
+    display_name: "CUSIP Number"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "ticker"
+    type: string
+    description: "Primary stock ticker symbol"
+    display_name: "Ticker"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "currency"
+    type: string
+    description: "Currency denomination of the security or crypto wallet"
+    display_name: "Currency"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument", "crypto_wallet"]
+    passive: true
+
+  - name: "figi"
+    type: string
+    description: "Financial Instrument Global Identifier (Bloomberg OpenFIGI)"
+    display_name: "FIGI"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  # issuer is modeled as the instrument_issuer relationship (see relationships section)
+
+  # CryptoWallet properties
+  - name: "public_key"
+    type: string
+    description: "Blockchain public key or wallet address"
+    display_name: "Public Key"
+    mergeability: not_mergeable
+    domain_flavors: ["crypto_wallet"]
+    passive: true
+
+  # Document properties
+  - name: "document_number"
+    type: string
+    description: "Passport or identity document number"
+    display_name: "Document Number"
+    mergeability: not_mergeable
+    domain_flavors: ["identity_document"]
+    passive: true
+
+  - name: "document_country"
+    type: string
+    description: "Issuing country of the identity document"
+    display_name: "Document Country"
+    mergeability: not_mergeable
+    domain_flavors: ["identity_document"]
+    passive: true
+
+  # Article properties
+  - name: "title"
+    type: string
+    description: "Title of the entity"
+    display_name: "Title"
+    mergeability: not_mergeable
+    domain_flavors: ["article"]
+    passive: true
+
+  - name: "published_at"
+    type: string
+    description: "Publication date of the article"
+    display_name: "Published At"
+    mergeability: not_mergeable
+    domain_flavors: ["article"]
+    passive: true
+
+  # Sanction program properties
+  - name: "program_description"
+    type: string
+    description: "Description of the sanctions program and its legal basis"
+    display_name: "Program Description"
+    mergeability: not_mergeable
+    domain_flavors: ["sanction_program"]
+    passive: true
+
+  - name: "program_url"
+    type: string
+    description: "URL of the official sanctions program page"
+    display_name: "Program URL"
+    mergeability: not_mergeable
+    domain_flavors: ["sanction_program"]
+    passive: true
+
+  - name: "program_issuer"
+    type: string
+    description: "Government body or authority that administers the sanctions program"
+    display_name: "Program Issuer"
+    mergeability: not_mergeable
+    domain_flavors: ["sanction_program"]
+    passive: true
+
+  - name: "program_measures"
+    type: string
+    description: "Type of sanctions measures imposed by the program, one atom per measure"
+    display_name: "Program Measures"
+    mergeability: not_mergeable
+    domain_flavors: ["sanction_program"]
+    passive: true
+
+relationships:
+  - name: "sanction_program"
+    description: "Links a sanctioned entity to the sanctions program under which it is designated"
+    display_name: "Sanction Program"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "location", "physical_asset"]
+    target_flavors: ["sanction_program", "organization"]
+    passive: true
+
+  - name: "flag"
+    description: "Links a vessel to its flag state country"
+    display_name: "Flag"
+    mergeability: not_mergeable
+    domain_flavors: ["ship"]
+    target_flavors: ["location"]
+    passive: true
+
+  - name: "country"
+    description: "Links a sanctioned organization to its associated country"
+    display_name: "Country"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "legal_entity", "ship", "financial_instrument", "physical_asset", "political_position"]
+    target_flavors: ["location"]
+    passive: true
+
+  - name: "owns"
+    description: "A person or organization owns or controls another organization or location (such as real estate)."
+    display_name: "Owns"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity"]
+    target_flavors: ["organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "physical_asset", "location"]
+    passive: true
+
+  - name: "is_director"
+    description: "A person or entity is on the board of directors of an organization. Not to be used for heads of organizations."
+    display_name: "Is Director"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity", "organization"]
+    target_flavors: ["organization", "legal_entity"]
+    passive: true
+
+  - name: "holds_political_position"
+    description: "Links a politically exposed person to the position they hold"
+    display_name: "Holds Political Position"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity"]
+    target_flavors: ["political_position"]
+    passive: true
+
+  - name: "is_holder"
+    description: "Links a person to an identity document (passport, national ID)"
+    display_name: "Is Holder"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity"]
+    target_flavors: ["identity_document"]
+    passive: true
+
+  - name: "instrument_issuer"
+    description: "Links a financial instrument to the organization that issued it"
+    display_name: "Instrument Issuer"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    target_flavors: ["organization", "legal_entity"]
+    passive: true
+
+  - name: "appears_in"
+    description: "An entity or event appears in a source document"
+    display_name: "Appears In"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity"]
+    target_flavors: ["article"]
+    passive: true
+
+  - name: "family_member"
+    description: "Links a person to a family member (spouse, parent, child, sibling)"
+    display_name: "Family Member"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity"]
+    target_flavors: ["person", "legal_entity"]
+    passive: true
+
+  - name: "associated_with"
+    description: "A generic association between two entities, from UnknownLink or Associate schemas"
+    display_name: "Associated With"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "physical_asset"]
+    target_flavors: ["person", "organization", "legal_entity", "ship", "aircraft", "financial_instrument", "crypto_wallet", "physical_asset"]
+    passive: true
+
+  - name: "succeeds"
+    description: "Links a successor entity to its predecessor (positions or organizations)"
+    display_name: "Succeeds"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "political_position"]
+    target_flavors: ["person", "organization", "legal_entity", "political_position"]
+    passive: true
+
+  - name: "represents"
+    description: "A person or entity legally or diplomatically represents another entity"
+    display_name: "Represents"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity"]
+    target_flavors: ["person", "organization", "legal_entity"]
+    passive: true
+
+  - name: "is_member"
+    description: "A person is a member of an organization"
+    display_name: "Is Member"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity"]
+    target_flavors: ["organization", "legal_entity"]
+    passive: true
+
+  - name: "employed_by"
+    description: "A person is employed by an organization"
+    display_name: "Employed By"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "legal_entity"]
+    target_flavors: ["organization", "legal_entity"]
+    passive: true
+
+  - name: "paid"
+    description: "One entity made a payment to another"
+    display_name: "Paid"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "physical_asset"]
+    target_flavors: ["person", "organization", "legal_entity", "physical_asset"]
+    passive: true
+
+  - name: "owes_debt"
+    description: "One entity owes a debt to another"
+    display_name: "Owes Debt"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization", "legal_entity", "physical_asset"]
+    target_flavors: ["person", "organization", "legal_entity", "physical_asset"]
+    passive: true
+
+attributes:
+  - properties: ["sanction_program"]
+    name: "authority"
+    type: string
+    description: "Name of the sanctioning authority"
+    display_name: "Authority"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "reason"
+    type: string
+    description: "Reason(s) for the sanctions designation"
+    display_name: "Reason"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "listing_date"
+    type: string
+    description: "Date when the entity was listed under this program"
+    display_name: "Listing Date"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "start_date"
+    type: string
+    description: "Start date of the sanctions measures"
+    display_name: "Start Date"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "end_date"
+    type: string
+    description: "End date of the sanctions measures, if lifted"
+    display_name: "End Date"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "status"
+    type: string
+    description: "Current status of the designation"
+    display_name: "Status"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "provisions"
+    type: string
+    description: "Legal provisions under which the entity is designated"
+    display_name: "Provisions"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["sanction_program"]
+    name: "summary"
+    type: string
+    description: "Summary of the sanctions designation"
+    display_name: "Summary"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["family_member"]
+    name: "relationship_type"
+    type: string
+    description: "Type of family relationship (e.g. spouse, child, parent, sibling)"
+    display_name: "Relationship Type"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["associated_with"]
+    name: "role"
+    type: string
+    description: "Role or nature of the association"
+    display_name: "Role"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["associated_with"]
+    name: "relationship_type"
+    type: string
+    description: "Type of association (e.g. partner in business, significant person)"
+    display_name: "Relationship Type"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["represents"]
+    name: "role"
+    type: string
+    description: "Nature of the representation (e.g. lawyer, diplomat)"
+    display_name: "Role"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["is_member"]
+    name: "role"
+    type: string
+    description: "Role within the organization"
+    display_name: "Role"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["employed_by"]
+    name: "role"
+    type: string
+    description: "Job title or role"
+    display_name: "Role"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["paid"]
+    name: "summary"
+    type: string
+    description: "Description of the payment"
+    display_name: "Summary"
+    mergeability: not_mergeable
+    passive: true
+
+  - properties: ["owes_debt"]
+    name: "summary"
+    type: string
+    description: "Description of the debt"
+    display_name: "Summary"
+    mergeability: not_mergeable
+    passive: true

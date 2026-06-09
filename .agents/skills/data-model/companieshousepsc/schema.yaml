@@ -1,0 +1,299 @@
+# Dataset schema for Companies House People with Significant Control (PSC).
+#
+# Architecture:
+#   Each PSC JSON record produces TWO records:
+#     1. An organization record (the controlled company) with identity
+#        properties (company number).
+#     2. A person or organization record (the PSC) with a "controls"
+#        relationship to the company, carrying natures_of_control,
+#        notified_on, and ceased_on as attributes.
+#
+# All elements are passive — created by the atomizer from parsed JSON
+# snapshot data, not by LLM extraction.
+#
+# Source identifier: "companieshousepsc-source"
+name: "companieshousepsc"
+description: "UK People with Significant Control (PSC) data from Companies House — individuals and entities with significant control over UK companies"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["companies_house_number", "registration_number"]
+    passive: true
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "verification_info"
+    namespace: "companieshousepsc"
+    description: "Identity verification details for a person with significant control."
+    display_name: "Verification Info"
+    mergeability: not_mergeable
+    strong_id_properties: ["companieshousepsc_verification_id"]
+    passive: true
+
+# --- Identity properties (on organization) ---
+
+properties:
+  - name: "companies_house_number"
+    type: string
+    description: "Companies House registered company number uniquely identifying a UK company"
+    display_name: "Companies House Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["00000006", "12345678", "SC123456"]
+    passive: true
+
+  - name: "registration_number"
+    type: string
+    description: "Registration number of a corporate entity PSC as provided in their identification details"
+    display_name: "Registration Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["00686734", "HRB 12345", "34317340"]
+    passive: true
+
+  - name: "country_registered"
+    type: string
+    description: "Country in which a corporate entity PSC is registered"
+    display_name: "Country Registered"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["England & Wales", "Netherlands", "United Kingdom"]
+    passive: true
+
+  - name: "legal_form"
+    type: string
+    description: "Legal form of a corporate entity PSC (e.g. Private Limited Company, LLP)"
+    display_name: "Legal Form"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Private Limited Company", "Limited Liability Partnership", "Public Limited Company"]
+    passive: true
+
+  - name: "legal_authority"
+    type: string
+    description: "Legal authority under which a corporate entity PSC is registered"
+    display_name: "Legal Authority"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Companies Act", "Companies Act 2006", "Dutch Company Law"]
+    passive: true
+
+  - name: "place_registered"
+    type: string
+    description: "Place or registry where a corporate entity PSC is registered"
+    display_name: "Place Registered"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Companies House Cardiff", "Kamer Van Koophandel", "Register Of Companies"]
+    passive: true
+
+  # --- PSC person properties ---
+
+  - name: "honorific"
+    type: string
+    description: "Title of an individual person with significant control (e.g. Mr, Mrs, Dr)"
+    display_name: "Honorific"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["Mr", "Mrs", "Dr", "Ms"]
+    passive: true
+
+  - name: "forename"
+    type: string
+    description: "First name of an individual person with significant control"
+    display_name: "Forename"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["John", "Jane", "Mohammed"]
+    passive: true
+
+  - name: "middle_name"
+    type: string
+    description: "Middle name of an individual person with significant control"
+    display_name: "Middle Name"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["James", "Elizabeth", "Lee"]
+    passive: true
+
+  - name: "surname"
+    type: string
+    description: "Surname of an individual person with significant control"
+    display_name: "Surname"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["Smith", "Doe", "Patel"]
+    passive: true
+
+  - name: "date_of_birth"
+    type: string
+    description: "Date of birth of an individual person with significant control, as YYYY-MM (month and year only; day is not disclosed)"
+    display_name: "Date of Birth"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["1971-02", "1985-11"]
+    passive: true
+
+  - name: "declared_nationality"
+    type: string
+    description: "Self-declared nationality of an individual person with significant control, as free text"
+    display_name: "Declared Nationality"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["British", "American", "German"]
+    passive: true
+
+  - name: "country_of_residence"
+    type: string
+    description: "Country of residence of an individual person with significant control"
+    display_name: "Country of Residence"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    examples: ["England", "Scotland", "United States"]
+    passive: true
+
+  - name: "notified_on"
+    type: string
+    description: "Date on which Companies House was notified of this person or organization with significant control, as YYYY-MM-DD"
+    display_name: "Notified On"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    examples: ["2016-04-06", "2023-01-15"]
+    passive: true
+
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    examples: ["Norfolk House Farm, Gedney Marsh, Holbeach, Spalding, Lincolnshire, PE12 9PB"]
+    passive: true
+
+  # --- Identity verification properties (on verification_info) ---
+
+  - name: "identity_verified_on"
+    type: string
+    description: "Date on which the PSC's identity was verified, as an ISO 8601 timestamp"
+    display_name: "Identity Verified On"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    examples: ["2026-05-01"]
+    passive: true
+
+  - name: "verification_start_on"
+    type: string
+    description: "Date from which an identity verification statement can be supplied for the PSC notification"
+    display_name: "Verification Start On"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    examples: ["2025-12-17T00:00:00Z"]
+    passive: true
+
+  - name: "verification_end_on"
+    type: string
+    description: "Date on which the identity verification statement was removed for the PSC notification"
+    display_name: "Verification End On"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    examples: ["9999-12-31T00:00:00Z"]
+    passive: true
+
+  - name: "verification_statement_date"
+    type: string
+    description: "Date on which the identity verification statement was supplied for the PSC notification"
+    display_name: "Verification Statement Date"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    examples: ["2026-08-23T00:00:00Z"]
+    passive: true
+
+  - name: "verification_statement_due_on"
+    type: string
+    description: "Date by which an identity verification statement must be supplied for the PSC notification"
+    display_name: "Verification Statement Due On"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    examples: ["2026-09-05T00:00:00Z"]
+    passive: true
+
+
+# --- Relationships ---
+
+relationships:
+  - name: "controls"
+    description: "Link from a person or organization to a company they have significant control over"
+    display_name: "Controls"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    target_flavors: ["organization"]
+    passive: true
+
+  - name: "has_verification"
+    description: "Link from a person to their identity verification record"
+    display_name: "Has Verification"
+    mergeability: not_mergeable
+    domain_flavors: ["person"]
+    target_flavors: ["companieshousepsc::verification_info"]
+    passive: true
+
+  - name: "verified_by_csp"
+    description: "Link from a verification record to the authorised corporate service provider that verified the PSC's identity"
+    display_name: "Verified By CSP"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    target_flavors: ["organization"]
+    passive: true
+
+  - name: "anti_money_laundering_supervisory_body"
+    description: "Link from a verification record to the anti-money laundering supervisory body that performed the verification"
+    display_name: "AML Supervisory Body"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshousepsc::verification_info"]
+    target_flavors: ["organization"]
+    passive: true
+
+# --- Attributes (on the controls relationship) ---
+
+attributes:
+  - properties: ["controls"]
+    name: "kind"
+    type: string
+    description: "The kind of PSC entry, indicating whether the controlling party is an individual, corporate entity, or legal person"
+    display_name: "PSC Kind"
+    mergeability: not_mergeable
+
+  - properties: ["controls"]
+    name: "nature_of_control"
+    type: string
+    description: "A single nature of significant control, e.g. share ownership percentage band or voting rights; multiple values may be present as separate attributes"
+    display_name: "Nature of Control"
+    mergeability: not_mergeable
+
+  - properties: ["controls"]
+    name: "notified_on"
+    type: string
+    description: "Date on which Companies House was notified of this person with significant control, as YYYY-MM-DD"
+    display_name: "Notified On"
+    mergeability: not_mergeable
+
+  - properties: ["controls"]
+    name: "ceased_on"
+    type: string
+    description: "Date on which this person ceased to have significant control, as YYYY-MM-DD; empty if still active"
+    display_name: "Ceased On"
+    mergeability: not_mergeable

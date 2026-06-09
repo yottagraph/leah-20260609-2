@@ -1,0 +1,58 @@
+# Dataset schema for patent-parents: aggregated US patent counts per assignee
+# from Google Patents Public Datasets.
+#
+# Structured atomization only — no LLM extraction.
+name: "patentparents"
+description: "Aggregated US patent grant counts per assignee from Google Patents Public Datasets (patents-public-data.patents.publications)."
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+properties:
+  - name: "total_patents"
+    namespace: "patentparents"
+    type: float
+    description: "Total number of US patent grants assigned to this organization in the scanned grant_date window"
+    display_name: "Total Patents"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "grant_date_from"
+    namespace: "patentparents"
+    type: string
+    description: "Start of the grant_date window"
+    display_name: "Grant Date From"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "grant_date_to"
+    namespace: "patentparents"
+    type: string
+    description: "End of the grant_date window"
+    display_name: "Grant Date To"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+relationships:
+  - name: "subsidiary_of"
+    namespace: "patentparents"
+    description: "An organization is a subsidiary, affiliate, or controlled entity of another organization (e.g. a special purpose partnership controlled by a developer)."
+    display_name: "Subsidiary Of"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    passive: true

@@ -1,0 +1,210 @@
+# Dataset schema for FMCSA Company Census File (DOT Motor Carrier Census).
+#
+# Source: https://data.transportation.gov/Trucking-and-Motorcoaches/Company-Census-File/az4n-8mr2
+# Updated daily by FMCSA from a 24-hour-old database snapshot.
+#
+# This schema describes motor carrier entities registered with the Federal
+# Motor Carrier Safety Administration, including identity, physical location,
+# fleet composition, and safety ratings.
+name: "dotcensus"
+description: "FMCSA motor carrier company census data including registration, fleet size, carrier operations, and safety ratings from the DOT Company Census File"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "person"
+    description: "A real person as opposed to a fictional character, such as a CEO, politician, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["New York City", "San Francisco", "North America", "Bakery Square"]
+    passive: true
+
+properties:
+  - name: "usdot_number"
+    type: string
+    description: "USDOT number assigned by FMCSA, uniquely identifying a registered motor carrier, broker, or shipper"
+    display_name: "USDOT Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["12345", "99999"]
+    passive: true
+
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["21154 HWY EAST, SILOAM SPRINGS, AR 72761"]
+    passive: true
+
+  - name: "carrier_status"
+    namespace: "dotcensus"
+    type: string
+    description: "FMCSA carrier registration status"
+    display_name: "Carrier Status"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (Active)", "I (Inactive)", "N (Not Authorized)"]
+    passive: true
+
+  - name: "phone_number"
+    namespace: "dotcensus"
+    type: string
+    description: "Primary phone number of the carrier"
+    display_name: "Phone Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["5551234567"]
+    passive: true
+
+  - name: "carrier_operation_type"
+    namespace: "dotcensus"
+    type: string
+    description: "Type of carrier operation"
+    display_name: "Carrier Operation Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (Interstate)", "B (Intrastate Hazmat)", "C (Intrastate Non-Hazmat)"]
+    passive: true
+
+  - name: "safety_rating"
+    namespace: "dotcensus"
+    type: string
+    description: "FMCSA safety rating assigned during compliance review"
+    display_name: "Safety Rating"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["Satisfactory", "Conditional", "Unsatisfactory"]
+    passive: true
+
+  - name: "safety_rating_date"
+    namespace: "dotcensus"
+    type: string
+    description: "Date the safety rating was assigned, derived from the SAFETY_RATING_DATE field"
+    display_name: "Safety Rating Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "last_mcs150_filing_date"
+    namespace: "dotcensus"
+    type: string
+    description: "Date the carrier last filed or updated their MCS-150 Motor Carrier Identification Report with FMCSA"
+    display_name: "Last MCS-150 Filing Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "hazmat_indicator"
+    namespace: "dotcensus"
+    type: float
+    description: "Whether the carrier transports hazardous materials (1.0 = yes, 0.0 = no), derived from the HM_Ind field"
+    display_name: "Hazmat Indicator"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "total_drivers"
+    namespace: "dotcensus"
+    type: float
+    description: "Total number of drivers reported by the carrier"
+    display_name: "Total Drivers"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "total_power_units"
+    namespace: "dotcensus"
+    type: float
+    description: "Total number of power units (trucks, tractors) operated by the carrier"
+    display_name: "Total Power Units"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "total_bus_units"
+    namespace: "dotcensus"
+    type: float
+    description: "Total number of bus units operated by the carrier"
+    display_name: "Total Bus Units"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    passive: true
+
+  - name: "fleet_size_category"
+    namespace: "dotcensus"
+    type: string
+    description: "Fleet size category assigned by FMCSA based on the number of power units"
+    display_name: "Fleet Size Category"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["A (1-6 power units)", "D (20-100 power units)", "F (1000+ power units)"]
+    passive: true
+
+  - name: "business_org_type"
+    namespace: "dotcensus"
+    type: string
+    description: "Business organization type of the carrier"
+    display_name: "Business Organization Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["Individual", "Partnership", "Corporation"]
+    passive: true
+
+  - name: "entity_type"
+    namespace: "dotcensus"
+    type: string
+    description: "FMCSA entity type indicating whether the entity operates as a carrier, broker, shipper, or combination"
+    display_name: "Entity Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["Carrier", "Carrier; Broker", "Carrier; Shipper"]
+    passive: true
+
+  - name: "operating_authority"
+    namespace: "dotcensus"
+    type: string
+    description: "Operating authority classification describing the carrier's authorization type"
+    display_name: "Operating Authority"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["AUTHORIZED FOR HIRE", "PRIVATE PROPERTY", "EXEMPT FOR HIRE"]
+    passive: true
+
+  - name: "doing_business_as"
+    namespace: "dotcensus"
+    type: string
+    description: "FMCSA trade name or 'doing business as' (DBA) name when it differs from the legal name; stored as a string attribute on the legal-name entity, not a link to another entity"
+    display_name: "DOT Doing Business As"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    examples: ["Acme Express", "G & G TRANSPORTATION CO", "CJ TRUCKING"]
+    passive: true
+
+relationships:
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["organization", "person"]
+    target_flavors: ["location"]
+    examples: ["DAYSPRING CARDS INC is located at SILOAM SPRINGS, AR"]
+    passive: true

@@ -1,0 +1,498 @@
+# Dataset schema for FDIC banking data (BankFind Suite API).
+#
+# This schema describes entity types, properties, and relationships produced
+# by atomizing structured JSON from the FDIC BankFind Suite API endpoints:
+# Institutions, Financials (Call Reports), and Failures. All elements are
+# passive — they are created by the atomizer from parsed JSON fields, not
+# by LLM extraction.
+#
+# Three source identifiers are used on records:
+#   - "fdic"          — institution profiles + quarterly financials
+#   - "fdic_failure"  — bank failure and resolution data (from /failures endpoint)
+#   - "fdic_history"  — institution-level structure-change events (mergers,
+#                       consolidations, voluntary closings, name changes,
+#                       regulator changes, failures, etc., from /history endpoint
+#                       filtered to ORG_ROLE_CDE:FI)
+name: "fdic"
+description: "FDIC-insured depository institution profiles, quarterly Call Report financials, bank failure/resolution data, and institution-level structure-change events (mergers, consolidations, name/regulator/charter changes, voluntary closings, failures) from the FDIC BankFind Suite API"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["fdic_certificate_number"]
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["New York City", "San Francisco", "North America", "Bakery Square"]
+    passive: true
+
+  - name: "bank_structure_event"
+    description: "An institution-level structure-change transaction recorded by the FDIC against an FDIC-insured (or FDIC-tracked) depository institution. Each row in the FDIC History API at the institution level (ORG_ROLE_CDE='FI') becomes one event entity, covering unassisted mergers, consolidations, absorptions, FDIC-assisted resolutions, voluntary closings, new charters, name changes, regulator and chartering-agency changes, class changes, and trust-power grants. Each event carries explicit relationships to every involved institution (subject, outgoing, surviving, acquiring) so a transaction is queryable as a first-class graph object."
+    display_name: "Bank Structure Event"
+    mergeability: not_mergeable
+    strong_id_properties: ["fdic_transaction_number", "fdic_history_event_id"]
+    examples: ["FDIC TXN 2026008583 — Merger -Without Assistance: Flint Hills Bank → The Bennington State Bank (2026-04-08)"]
+    passive: true
+
+# --- Identity and Registration (source: fdic) ---
+
+properties:
+  - name: "fdic_certificate_number"
+    type: string
+    description: "FDIC Certificate Number uniquely identifying an insured institution, derived from the CERT field in the Institutions API"
+    display_name: "FDIC Certificate Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["628", "3850"]
+    passive: true
+
+  - name: "fed_rssd_id"
+    type: string
+    description: "Federal Reserve RSSD ID assigned to the financial institution by the Federal Reserve, derived from the FED_RSSD field"
+    display_name: "Federal Reserve RSSD ID"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["852218", "242"]
+    passive: true
+
+  - name: "physical_address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Physical Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["1111 Polaris Pkwy, Columbus, OH 43240", "101 Main St, Xenia, IL 62899"]
+    passive: true
+
+  - name: "charter_class"
+    type: string
+    description: "FDIC institution charter class code describing charter type and regulatory supervision (e.g., N=national bank OCC-supervised, SM=state-chartered Fed member, NM=state-chartered non-member, SB=savings bank, SA=savings association)"
+    display_name: "Charter Class"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["N", "SM", "NM", "SB", "SA"]
+    passive: true
+
+  - name: "regulatory_agency"
+    type: string
+    description: "Primary federal regulatory agency supervising this institution, derived from the REGAGNT field"
+    display_name: "Regulatory Agency"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["OCC", "FED", "FDIC"]
+    passive: true
+
+  - name: "established_date"
+    type: string
+    description: "Date the institution was established, reformatted from ESTYMD to YYYY-MM-DD"
+    display_name: "Established Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["1824-01-01", "1934-01-01"]
+    passive: true
+
+  - name: "fdic_insurance_date"
+    type: string
+    description: "Date the institution obtained FDIC deposit insurance, reformatted from INSDATE to YYYY-MM-DD"
+    display_name: "FDIC Insurance Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["1934-01-01", "2005-06-15"]
+    passive: true
+
+  - name: "active_flag"
+    type: float
+    description: "Whether the institution is currently active and operating (1.0 = active, 0.0 = inactive), derived from the ACTIVE field"
+    display_name: "Active Flag"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "holding_company_name"
+    type: string
+    description: "Name of the top-tier bank holding company, derived from the NAMEHCR field; omitted when the institution is independent"
+    display_name: "Holding Company Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["JPMORGAN CHASE&CO", "FIRST COMMUNITY BANCSHARES"]
+    passive: true
+
+  - name: "website"
+    type: string
+    description: "Primary website URL of the institution, derived from the WEBADDR field; omitted when blank"
+    display_name: "Website"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["www.jpmorganchase.com", "www.fcbanking.com"]
+    passive: true
+
+  - name: "fdic_geographic_region"
+    type: string
+    description: "FDIC supervisory region name, derived from the FDICREGN field"
+    display_name: "FDIC Geographic Region"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Chicago", "Atlanta", "Dallas"]
+    passive: true
+
+  - name: "institution_category"
+    type: string
+    description: "FDIC specialization group description classifying the institution by size and type, derived from the SPECGRPN field"
+    display_name: "Institution Category"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["International Specialization", "ALL OTHER UNDER 1 BILLION", "ALL OTHER 1 TO 10 BILLION"]
+    passive: true
+
+  - name: "office_count"
+    type: float
+    description: "Total number of offices (branches) operated by the institution including domestic and foreign, derived from the OFFICES field"
+    display_name: "Office Count"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["5320.0", "1.0", "25.0"]
+    passive: true
+
+  - name: "former_name"
+    type: string
+    description: "A previous legal name of the entity"
+    display_name: "Former Name"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["Chemical Bank", "The Chase Manhattan Bank"]
+    passive: true
+
+  # --- Quarterly Financial Data (source: fdic) ---
+  # From FDIC BankFind Suite Financials API (Call Reports FFIEC 031/041/051).
+  # Shared properties (total_assets, total_liabilities, shareholders_equity,
+  # net_income) are converted from thousands to USD for cross-source
+  # compatibility. FDIC-specific properties remain in thousands of USD.
+
+  - name: "total_assets"
+    type: float
+    description: "Total assets"
+    display_name: "Total Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "total_deposits"
+    type: float
+    description: "Total deposits held by the institution in thousands of USD as reported in Call Reports"
+    display_name: "Total Deposits"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "total_liabilities"
+    type: float
+    description: "Total liabilities"
+    display_name: "Total Liabilities"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "shareholders_equity"
+    type: float
+    description: "Total stockholders' or shareholders' equity"
+    display_name: "Shareholders Equity"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "net_income"
+    type: float
+    description: "Net income or loss for the reporting period"
+    display_name: "Net Income"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "net_loans_and_leases"
+    type: float
+    description: "Net loans and leases after deducting allowance for loan losses, in thousands of USD as reported in Call Reports"
+    display_name: "Net Loans and Leases"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "insured_deposits"
+    type: float
+    description: "Estimated FDIC-insured deposits (covered up to $250K per depositor) in thousands of USD"
+    display_name: "Insured Deposits"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "uninsured_deposits"
+    type: float
+    description: "Estimated deposits exceeding FDIC insurance coverage limits, in thousands of USD"
+    display_name: "Uninsured Deposits"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "return_on_assets"
+    type: float
+    description: "Return on assets: annualized net income as a percentage of average total assets"
+    display_name: "Return on Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "return_on_equity"
+    type: float
+    description: "Return on equity: annualized net income as a percentage of average total equity capital"
+    display_name: "Return on Equity"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "net_interest_margin"
+    type: float
+    description: "Net interest margin: net interest income as a percentage of average earning assets"
+    display_name: "Net Interest Margin"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "number_of_employees"
+    type: float
+    description: "Total number of full-time equivalent employees as reported in Call Reports"
+    display_name: "Number of Employees"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "interest_income"
+    type: float
+    description: "Total interest income for the reporting period, in thousands of USD"
+    display_name: "Interest Income"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "interest_expense"
+    type: float
+    description: "Total interest expense for the reporting period, in thousands of USD"
+    display_name: "Interest Expense"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  # --- Failure Identifiers (source: fdic_failure) ---
+
+  - name: "fdic_financial_institution_number"
+    type: string
+    description: "FDIC Financial Institution Number assigned to a failed bank, derived from the FIN field in the Failures API"
+    display_name: "FDIC Financial Institution Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2470", "10537"]
+    passive: true
+
+  # --- Failure Information (source: fdic_failure) ---
+
+  - name: "failure_date"
+    type: string
+    description: "Date the institution was closed by its chartering authority, reformatted from FAILDATE to YYYY-MM-DD"
+    display_name: "Failure Date"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["2026-01-30", "2025-06-27"]
+    passive: true
+
+  - name: "failure_resolution_type"
+    type: string
+    description: "Type of FDIC resolution action taken (e.g., P&A=Purchase and Assumption, PI=Purchase and Assumption Insured Deposits, PA=Purchase and Assumption All Deposits, PO=Payout)"
+    display_name: "Failure Resolution Type"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["P&A", "PI", "PA", "PO"]
+    passive: true
+
+  - name: "failure_estimated_loss"
+    type: float
+    description: "Estimated loss to the FDIC Deposit Insurance Fund from the institution's failure, in thousands of USD; may be updated as estimates are finalized"
+    display_name: "Failure Estimated Loss"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["23460.0", "30284.0"]
+    passive: true
+
+  - name: "failure_total_deposits"
+    type: float
+    description: "Total deposits held by the institution at the time of failure, in thousands of USD"
+    display_name: "Failure Total Deposits"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "failure_total_assets"
+    type: float
+    description: "Total assets held by the institution at the time of failure, in thousands of USD"
+    display_name: "Failure Total Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  # --- Bank Structure Event Properties (source: fdic_history) ---
+  # From FDIC BankFind Suite History API filtered to ORG_ROLE_CDE:FI.
+  # All elements are passive (atomized from JSON, no LLM extraction).
+
+  - name: "fdic_transaction_number"
+    type: string
+    description: "FDIC transaction number (TRANSNUM) uniquely identifying a transaction-backed structure-change in the FDIC History API; serves as the bank_structure_event entity's strong ID for the ~91% of FI-level events that are transaction-backed. The ~9% of FI-level events without a TRANSNUM (TRANSNUM=0, dominated by new-institution rows, location changes, and cert reassignments) instead carry an fdic_history_event_id strong ID"
+    display_name: "FDIC Transaction Number"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["2026008583", "2026007976", "2026002845"]
+    passive: true
+
+  - name: "fdic_history_event_id"
+    type: string
+    description: "Per-row identifier from the ID field of the FDIC History API, used as the bank_structure_event entity's strong ID for the ~16K of ~185K FI-level events that have no TRANSNUM (TRANSNUM=0). The ID is a composite of effective date, CHANGECODE, and an internal identifier (e.g. \"1972-09-28T00:00:00_150_14384__\") and is unique per row. Emitted only when TRANSNUM=0, so the two strong-id properties are mutually exclusive for a given event"
+    display_name: "FDIC History Event ID"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["1972-09-28T00:00:00_150_14384__", "1970-03-31T00:00:00_150_13853__"]
+    passive: true
+
+  - name: "event_change_code"
+    type: string
+    description: "FDIC structure-change event code (CHANGECODE) identifying the kind of structure change at the institution level — e.g. 110 (new institution), 211 (failure - whole institution), 221/222/223/224 (unassisted absorption/consolidation/merger/affiliated-pooling), 240 (voluntary closing), 310/320 (FRS membership change), 420/430/440/470 (chartering/class/org-type/regulator change), 510/520 (legal-name/physical-location change), 610 (trust powers granted), 810 (participated in absorption/consolidation/merger), 811 (participated in FDIC-assisted merger)"
+    display_name: "Event Change Code"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["223", "211", "510", "240", "110", "810", "440"]
+    passive: true
+
+  - name: "event_change_description"
+    type: string
+    description: "Human-readable description of the FDIC structure-change event code (CHANGECODE_DESC) as published by the FDIC"
+    display_name: "Event Change Description"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["Merger -Without Assistance", "Failure - Whole Institution", "Closing - Voluntary", "Change in Legal Name (FO or BR)", "New Institution"]
+    passive: true
+
+  - name: "event_category"
+    type: string
+    description: "Normalized bucket for the FDIC structure-change event, derived from CHANGECODE so consumers can filter without memorizing numeric codes. One of: merger (unassisted absorptions/consolidations/mergers/affiliated-pooling/branch-purchases and the partner-side merger rows: CC 221/222/223/224/225/712/810/811/812); failure (FDIC-assisted resolutions, conservatorships, RTC payoffs, open-bank assistance, and any closure driven by the chartering agency: CC 211/213/215/216/217/230/235/260/350/360/830); voluntary_closing (CC 240); new_institution (newly chartered institutions and admin cert reassignments: CC 110/150); name_change (CC 510); location_change (physical-address moves: CC 520); charter_change (FRS membership changes, insurance-status changes, chartering-agency/class/org-type/primary-regulator changes, trust powers granted, and phantom holding-company reorgs: CC 310/320/340/410/420/430/440/470/610/820); other (any CHANGECODE not in the above buckets, currently only CC 1 History Record Initiation). CHANGECODE definitions: https://banks.data.fdic.gov/docs/history_properties.yaml"
+    display_name: "Event Category"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["merger", "failure", "name_change", "location_change", "charter_change", "new_institution", "voluntary_closing", "other"]
+    passive: true
+
+  - name: "is_fdic_assisted"
+    type: string
+    description: "String-encoded boolean (\"true\"/\"false\") indicating whether the FDIC (or its predecessor RTC) provided financial assistance, brokered the resolution, or otherwise stepped in to handle the institution. True for CHANGECODEs 211/213/215/216/217/230/235/260/350/360/811/812/830 (all failure-bucket codes plus the two partner-side rows for FDIC-Assisted Merger and Rtc Assisted Merger); false for all other codes. Orthogonal to event_category: 811/812 are in the merger bucket but are also FDIC-assisted. CHANGECODE definitions: https://banks.data.fdic.gov/docs/history_properties.yaml"
+    display_name: "FDIC-Assisted Resolution"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["true", "false"]
+    passive: true
+
+  - name: "event_charter_class"
+    type: string
+    description: "FDIC institution charter class code in effect for the subject institution at the time of the event, sourced from the History API CLASS field. Same code set as the organization-level charter_class property (N/SM/NM/SB/SA/...). Critical for charter/regulator-change events (CC 430 Change in Class, CC 440 Change in Organization Type, CC 470 Change in Primary Regulatory Agency), where this is the class the institution changed TO. CHANGECODE and CLASS definitions: https://banks.data.fdic.gov/docs/history_properties.yaml"
+    display_name: "Event Charter Class"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["N", "SM", "NM", "SB", "SA"]
+    passive: true
+
+  - name: "event_effective_date"
+    type: string
+    description: "Date the FDIC structure-change event took legal effect, formatted YYYY-MM-DD; derived from the EFFDATE field of the History API"
+    display_name: "Event Effective Date"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["2026-04-08", "2008-12-31", "2004-07-01"]
+    passive: true
+
+  - name: "previous_legal_name"
+    type: string
+    description: "An institution's prior legal name immediately preceding a structure-change event that altered the legal name; derived from the FRM_INSTNAME field of the History API and emitted only when distinct from the current INSTNAME"
+    display_name: "Previous Legal Name"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["ASSOCIATED CREDIT UNION", "Wachovia Bank, National Association"]
+    passive: true
+
+  - name: "previous_fdic_certificate_number"
+    type: string
+    description: "An institution's prior FDIC certificate number, derived from the FRM_CERT field of the History API and emitted only when present and distinct from the current CERT. The canonical case is CHANGECODE 150 (Cert Changed from Old Cert by Administrative Order). The same prior CERT is also added as an additional fdic_certificate_number strong-id alias on the subject_institution organization entity, so entity resolution merges the bank's old-cert and new-cert identities. CHANGECODE definitions: https://banks.data.fdic.gov/docs/history_properties.yaml"
+    display_name: "Previous FDIC Certificate Number"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    examples: ["90054", "90465", "90337"]
+    passive: true
+
+relationships:
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["location"]
+    examples: ["JPMorgan Chase Bank is located at Columbus, OH"]
+    passive: true
+
+  - name: "acquired_by"
+    description: "Links a failed institution to the acquiring institution that purchased its assets and/or assumed its deposits during FDIC resolution; derived from the BIDNAME field in the Failures API. Coexists with the more general succeeded_by relationship and with bank_structure_event entities; the parallel representations are intentional"
+    display_name: "Acquired By"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["First Independence Bank acquired Metropolitan Capital B&T"]
+    passive: true
+
+  - name: "succeeded_by"
+    description: "Links a depository institution that ceased to exist (via merger, consolidation, absorption, or FDIC resolution) directly to its successor institution. Sourced from the FDIC History API (fdic_history) whenever a 2-party event has both an outgoing party (OUT_CERT) and a distinct surviving/acquiring party (ACQ_CERT, falling back to SUR_CERT) AND the outgoing party actually disappeared (ORG_STAT_FLG=N). Provides a direct bank-to-bank lineage edge alongside the richer bank_structure_event entity model; both representations are emitted intentionally so consumers can pick whichever shape fits their query."
+    display_name: "Succeeded By"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["organization"]
+    examples: ["Wachovia Bank of Delaware succeeded by Wells Fargo Bank, National Association", "Silicon Valley Bank succeeded by Deposit Insurance National Bank of Santa Clara"]
+    passive: true
+
+  - name: "subject_institution"
+    description: "Links a bank structure-change event to the FDIC-tracked institution this History API row is filed against (the row's primary CERT). For mergers/failures this is the disappearing party (also surfaced as outgoing_institution); for name changes, regulator changes, charter changes, voluntary closings, and new institutions, this is the affected institution itself."
+    display_name: "Subject Institution"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    target_flavors: ["organization"]
+    examples: ["FDIC TXN 2026007976 → Openland Credit Union (subject of legal-name change)"]
+    passive: true
+
+  - name: "outgoing_institution"
+    description: "Links a bank structure-change event to the FDIC-tracked institution that ceased to exist as a result of the event; derived from the OUT_CERT and OUT_INSTNAME fields of the History API and emitted only when populated"
+    display_name: "Outgoing Institution"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    target_flavors: ["organization"]
+    examples: ["FDIC TXN 2026008583 → Flint Hills Bank (disappearing party of unassisted merger)"]
+    passive: true
+
+  - name: "successor_institution"
+    description: "Links a bank structure-change event to the FDIC-tracked institution that took the outgoing party's deposits and/or assets following a merger, consolidation, absorption, or assisted resolution. Sourced preferentially from the ACQ_CERT/ACQ_INSTNAME fields of the History API (the conventional acquirer), falling back to SUR_CERT/SUR_INSTNAME (the legal-survivor designation) when only the survivor side is populated. Collapses the FDIC's split ACQ/SUR signals because empirically they agree on the CERT in 99.99% of 2-party events (only 3 of 23,114 disagree across 90 years of FI-level history, and those 3 are administrative same-name cert renumberings rather than genuinely distinct parties). Consumers that need the raw distinction can re-derive it from the source by inspecting the original History API row's ACQ_CERT vs SUR_CERT."
+    display_name: "Successor Institution"
+    mergeability: not_mergeable
+    domain_flavors: ["bank_structure_event"]
+    target_flavors: ["organization"]
+    examples: ["FDIC TXN 2026008583 → The Bennington State Bank (unassisted-merger acquirer)", "FDIC TXN 2026002845 → First Independence Bank (acquirer of Metropolitan Capital B&T after FDIC-assisted resolution)"]
+    passive: true

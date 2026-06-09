@@ -1,0 +1,190 @@
+# Dataset schema for Companies House Accounts (UK).
+#
+# Architecture:
+#   Each iXBRL/XBRL accounts filing produces TWO records:
+#     1. An organization record (the company) with identity properties
+#        (company number, name) and a "filed" relationship to the accounts.
+#     2. An accounts_filing record (the document) carrying the balance sheet
+#        date and financial figures.
+#
+# All elements are passive — created by the atomizer from parsed iXBRL/XBRL
+# filings, not by LLM extraction.
+#
+# Source identifier: "companieshouse-source"
+name: "companieshouse"
+description: "UK company financial accounts filed with Companies House — balance sheet data, profit/loss, and company identity extracted from filings"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["companies_house_number"]
+    passive: true
+
+  - name: "accounts_filing"
+    namespace: "companieshouse"
+    description: "An annual accounts filing submitted to Companies House, identified by company number and balance sheet date"
+    display_name: "Accounts Filing"
+    mergeability: not_mergeable
+    strong_id_properties: ["filing_id"]
+    passive: true
+
+# --- Identity properties (on organization) ---
+
+properties:
+  - name: "companies_house_number"
+    type: string
+    description: "Companies House registered company number uniquely identifying a UK company"
+    display_name: "Companies House Number"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["00000006", "12345678", "SC123456"]
+    passive: true
+
+  - name: "registered_address"
+    type: string
+    description: "Registered office address of the company as reported in the accounts filing"
+    display_name: "Registered Address"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    examples: ["10 Downing Street, London, SW1A 2AA"]
+    passive: true
+
+  # --- Filing metadata (on accounts_filing) ---
+
+  - name: "filing_id"
+    type: string
+    description: "Unique identifier for the accounts filing, composed of the company number and balance sheet date (e.g. '12345678-2024-12-31')"
+    display_name: "Filing ID"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    examples: ["12345678-2024-12-31", "SC123456-2025-03-31"]
+    passive: true
+
+  - name: "balance_sheet_date"
+    type: string
+    description: "Balance sheet date of the filed accounts, as YYYY-MM-DD"
+    display_name: "Balance Sheet Date"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    examples: ["2025-03-31", "2024-12-31"]
+    passive: true
+
+  # --- Financial properties (on accounts_filing) ---
+
+  - name: "total_assets"
+    type: float
+    description: "Total assets"
+    display_name: "Total Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "total_liabilities"
+    type: float
+    description: "Total liabilities"
+    display_name: "Total Liabilities"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "shareholders_equity"
+    type: float
+    description: "Total stockholders' or shareholders' equity"
+    display_name: "Shareholders Equity"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "net_assets"
+    type: float
+    description: "Net assets or liabilities of the company, equal to total assets minus total liabilities"
+    display_name: "Net Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "fixed_assets"
+    type: float
+    description: "Total fixed (non-current) assets including tangible, intangible, and investment assets"
+    display_name: "Fixed Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "current_assets"
+    type: float
+    description: "Total current assets including cash, debtors, and stock"
+    display_name: "Current Assets"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "creditors_due_within_one_year"
+    type: float
+    description: "Total creditors falling due within one year (current liabilities)"
+    display_name: "Creditors Due Within One Year"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "creditors_due_after_one_year"
+    type: float
+    description: "Total creditors falling due after more than one year (non-current liabilities)"
+    display_name: "Creditors Due After One Year"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "revenue"
+    type: float
+    description: "Total revenue or turnover for the reporting period"
+    display_name: "Revenue"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "net_income"
+    type: float
+    description: "Net income or loss for the reporting period"
+    display_name: "Net Income"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "called_up_share_capital"
+    type: float
+    description: "Called up share capital of the company"
+    display_name: "Called Up Share Capital"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+  - name: "average_number_of_employees"
+    type: float
+    description: "Average number of employees during the reporting period"
+    display_name: "Number of Employees"
+    mergeability: not_mergeable
+    domain_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+# --- Relationships ---
+
+relationships:
+  - name: "filed"
+    description: "Link from a company or person to a regulatory filing document they filed, or from a sub-record to its parent filing"
+    display_name: "Filed"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["companieshouse::accounts_filing"]
+    passive: true
+
+attributes: []

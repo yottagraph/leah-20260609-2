@@ -1,0 +1,241 @@
+# Dataset schema for GLEIF ISIN-LEI mapping + Finnhub bond end-of-day prices.
+#
+# The streamer diffs LEI→ISIN mapping rows from the daily GLEIF-ANNA file and
+# fetches Finnhub /bond/price candles for every ISIN in the mapping each cycle.
+name: "finnhubbond"
+description: "GLEIF-ANNA ISIN-to-LEI issuer mappings and Finnhub bond end-of-day close prices for mapped ISINs"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    strong_id_properties: ["lei"]
+    passive: true
+
+  - name: "financial_instrument"
+    description: "A specific asset that can be traded, such as a stock, ETF, bond, CD, or fund. Companies are organizations, NOT financial instruments. Specific currency amounts are NOT financial instruments."
+    display_name: "Financial Instrument"
+    mergeability: not_mergeable
+    strong_id_properties: ["isin", "figi"]
+    passive: true
+
+properties:
+  - name: "lei"
+    type: string
+    description: "Legal Entity Identifier — a 20-character alphanumeric code uniquely identifying a legal entity in the global financial system (ISO 17442)"
+    display_name: "LEI"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    passive: true
+
+  - name: "isin"
+    type: string
+    description: "International Securities Identification Number (ISO 6166) uniquely identifying this financial instrument"
+    display_name: "ISIN"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "close_price"
+    type: float
+    description: "Closing price of the trading interval in USD"
+    display_name: "Close Price"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "yield"
+    type: float
+    description: "Yield on the security."
+    display_name: "Yield"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "figi"
+    type: string
+    description: "Financial Instrument Global Identifier (Bloomberg OpenFIGI)"
+    display_name: "FIGI"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "bond_type"
+    type: string
+    description: "Bond type from Finnhub /bond/profile (e.g. Corporate, Government)"
+    display_name: "Bond Type"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "debt_type"
+    type: string
+    description: "Debt type from Finnhub /bond/profile"
+    display_name: "Debt Type"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "coupon"
+    type: float
+    description: "Coupon rate of the security (e.g. 7.000% or Variable)."
+    display_name: "Coupon"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "coupon_type"
+    type: string
+    description: "Coupon type from Finnhub /bond/profile (e.g. Fixed)"
+    display_name: "Coupon Type"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "maturity_date"
+    type: string
+    description: "Maturity date of the security."
+    display_name: "Maturity Date"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "issue_date"
+    type: string
+    description: "Issue date of the bonds."
+    display_name: "Issue Date"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "first_coupon_date"
+    type: string
+    description: "First coupon date from Finnhub /bond/profile"
+    display_name: "First Coupon Date"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "dated_date"
+    type: string
+    description: "Dated date of the bonds."
+    display_name: "Dated Date"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "payment_frequency"
+    type: string
+    description: "Payment frequency from Finnhub /bond/profile"
+    display_name: "Payment Frequency"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "security_level"
+    type: string
+    description: "Security level from Finnhub /bond/profile (e.g. Senior)"
+    display_name: "Security Level"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "amount_outstanding"
+    type: float
+    description: "Amount outstanding from Finnhub /bond/profile"
+    display_name: "Amount Outstanding"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "original_offering"
+    type: float
+    description: "Original offering amount from Finnhub /bond/profile"
+    display_name: "Original Offering"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "offering_price"
+    type: float
+    description: "Offering price from Finnhub /bond/profile"
+    display_name: "Offering Price"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "industry_group"
+    type: string
+    description: "Industry group from Finnhub /bond/profile"
+    display_name: "Industry Group"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "industry_subgroup"
+    type: string
+    description: "Industry subgroup from Finnhub /bond/profile"
+    display_name: "Industry Subgroup"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "asset"
+    type: string
+    description: "Asset from Finnhub /bond/profile"
+    display_name: "Asset"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "asset_type"
+    type: string
+    description: "Asset type from Finnhub /bond/profile"
+    display_name: "Asset Type"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "day_count"
+    type: string
+    description: "Day count convention from Finnhub /bond/profile"
+    display_name: "Day Count"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+  - name: "security_term"
+    type: string
+    description: "Security term from Finnhub /bond/profile"
+    display_name: "Security Term"
+    mergeability: not_mergeable
+    domain_flavors: ["financial_instrument"]
+    passive: true
+
+relationships:
+  - name: "issued_security"
+    description: "The organization has issued this financial instrument, linked via GLEIF-ANNA ISIN-LEI daily mapping. To find the issuer of a security, query inversely: find the entity whose issued_security points to the instrument."
+    display_name: "Issued Security"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["financial_instrument"]
+    passive: true
+
+attributes:
+  - properties:
+      - "close_price"
+      - "yield"
+    name: "price_date"
+    type: string
+    description: "UTC calendar date (YYYY-MM-DD) of the bond price observation from Finnhub timestamp t[]"
+    display_name: "Price Date"
+    mergeability: not_mergeable
+    passive: true

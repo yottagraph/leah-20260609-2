@@ -71,13 +71,7 @@ function resolveConnNameLocally(project, slug) {
     try {
         const out = execFileSync(
             'gcloud',
-            [
-                'sql',
-                'instances',
-                'list',
-                `--project=${project}`,
-                '--format=json',
-            ],
+            ['sql', 'instances', 'list', `--project=${project}`, '--format=json'],
             { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
         );
         const instances = JSON.parse(out || '[]');
@@ -155,7 +149,7 @@ if (Array.isArray(warnings) && warnings.length) {
 
 if (!gcpProject) {
     fail(
-        'The portal could not resolve this tenant\'s GCP project yet — it may still be\n' +
+        "The portal could not resolve this tenant's GCP project yet — it may still be\n" +
             '   provisioning. Re-run `npm run bridge` in a few minutes.'
     );
 }
@@ -173,7 +167,7 @@ L.push('# the generator instead. Contains NO secrets (the only key here, the QS'
 L.push('# proxy key, is already in broadchurch.yaml and ships to the browser).');
 L.push('#');
 L.push('# Model: in local dev YOU are the workload identity. Each plane is reached');
-L.push('# DIRECTLY against the tenant\'s own GCP project using your `gcloud`');
+L.push("# DIRECTLY against the tenant's own GCP project using your `gcloud`");
 L.push('# Application Default Credentials — the same code path the in-cluster pod');
 L.push('# uses, just with the token from your laptop instead of the GKE metadata');
 L.push('# server.');
@@ -220,7 +214,8 @@ if (cloudSql.enabled) {
             console.log(`  (resolved Cloud SQL connection name locally via gcloud: ${conn})`);
         }
     }
-    const iamUser = cloudSql.iam_user || (runtimeGsa ? runtimeGsa.replace(/\.gserviceaccount\.com$/, '') : '');
+    const iamUser =
+        cloudSql.iam_user || (runtimeGsa ? runtimeGsa.replace(/\.gserviceaccount\.com$/, '') : '');
     L.push('');
     L.push('# --- Cloud SQL: DIRECT via the Cloud SQL Auth Proxy, IMPERSONATING the');
     L.push('#     runtime GSA (same component AND same identity as the in-pod sidecar) ---');
@@ -235,7 +230,9 @@ if (cloudSql.enabled) {
         L.push(`#     --impersonate-service-account=${runtimeGsa} \\`);
         L.push(`#     --port ${cloudSqlPort} ${conn}`);
     } else {
-        L.push('#   (connection_name not resolved yet — re-run `npm run bridge` once Cloud SQL warms up)');
+        L.push(
+            '#   (connection_name not resolved yet — re-run `npm run bridge` once Cloud SQL warms up)'
+        );
     }
     if (conn) L.push(`CLOUD_SQL_CONNECTION_NAME=${conn}`);
     if (iamUser) L.push(`CLOUD_SQL_IAM_USER=${iamUser}`);
@@ -252,7 +249,7 @@ L.push('# --- Agent: run the ADK api_server LOCALLY (the real agent-dev story) -
 L.push('# The DEPLOYED in-cluster agent is NOT reachable from a laptop (private GKE');
 L.push('# control plane). So run it locally — better anyway: edit agents/ and hit it');
 L.push('# immediately, with Vertex models + Elemental tools via your ADC + the');
-L.push('# tenant gateway key. The app\'s `gke` transport works the same on localhost.');
+L.push("# tenant gateway key. The app's `gke` transport works the same on localhost.");
 L.push('#');
 L.push('# One-time: agents/.venv with deps —');
 L.push('#   cd agents && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt');
@@ -264,7 +261,9 @@ L.push('NUXT_PUBLIC_AGENT_HOSTING=gke');
 L.push(`NUXT_AGENT_BASE_URL=${agentBaseUrl}`);
 if (queryServerUrl) {
     L.push('');
-    L.push(`# Query Server (informational; the app reaches it via the gateway proxy): ${queryServerUrl}`);
+    L.push(
+        `# Query Server (informational; the app reaches it via the gateway proxy): ${queryServerUrl}`
+    );
 }
 L.push('');
 

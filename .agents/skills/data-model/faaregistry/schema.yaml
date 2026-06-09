@@ -1,0 +1,395 @@
+# Dataset schema for FAA Releasable Aircraft Database.
+#
+# Source: https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download
+# Updated daily at 11:30 PM CT.
+#
+# This schema describes U.S. civil aircraft registrations from the FAA
+# Aircraft Registry, including MASTER.txt records joined with ENGINE.txt
+# reference data for engine manufacturer, model, and performance details.
+name: "faaregistry"
+description: "FAA aircraft registration data including N-number identity, aircraft and engine details, registration status, certification, and registrant information"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "aircraft"
+    description: "An aircraft such as a plane, helicopter, glider, or unmanned aerial vehicle"
+    display_name: "Aircraft"
+    mergeability: not_mergeable
+    strong_id_properties: ["aircraft_id"]
+    passive: true
+
+  - name: "organization"
+    description: "A particular business, institution, or organization such as a corporation, university, government agency, or non-profit"
+    display_name: "Organization"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "person"
+    description: "A named individual such as a business owner, executive, or public figure"
+    display_name: "Person"
+    mergeability: not_mergeable
+    passive: true
+
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    examples: ["WICHITA, KS", "SEATTLE, WA", "ATLANTA, GA"]
+    passive: true
+
+properties:
+  # Identity and Registration
+  - name: "aircraft_id"
+    type: string
+    description: "Composite aircraft identifier combining manufacturer name, model name, and serial number (format: MANUFACTURER:MODEL:SERIAL)"
+    display_name: "Aircraft ID"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["CESSNA:172S:172S10245", "BOEING:737-800:28-7990244"]
+    passive: true
+
+  - name: "n_number"
+    type: string
+    description: "FAA registration N-number uniquely identifying a U.S. civil aircraft"
+    display_name: "N-Number"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["12345", "789AB"]
+    passive: true
+
+  - name: "serial_number"
+    type: string
+    description: "Manufacturer serial number of the aircraft"
+    display_name: "Serial Number"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["28-7990244", "172S10245"]
+    passive: true
+
+  - name: "mode_s_code_hex"
+    type: string
+    description: "Aircraft Mode S transponder code in hexadecimal format (ICAO 24-bit address)"
+    display_name: "Mode S Code (Hex)"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["A12345", "ABCDEF"]
+    passive: true
+
+  - name: "mode_s_code"
+    type: string
+    description: "Aircraft Mode S transponder code in octal format"
+    display_name: "Mode S Code"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "unique_id"
+    type: string
+    description: "FAA-assigned unique identification number for the registration record"
+    display_name: "Unique ID"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  # Aircraft Details (joined from ACFTREF.txt)
+  - name: "manufacturer_name"
+    type: string
+    description: "Name of the aircraft manufacturer, joined from the FAA aircraft reference table"
+    display_name: "Manufacturer Name"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["CESSNA", "BOEING", "PIPER", "BEECH"]
+    passive: true
+
+  - name: "model_name"
+    type: string
+    description: "Aircraft model and series name, joined from the FAA aircraft reference table"
+    display_name: "Model Name"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["172S", "737-800", "PA-28-181"]
+    passive: true
+
+  - name: "number_of_engines"
+    type: string
+    description: "Number of engines on the aircraft, from the FAA aircraft reference table"
+    display_name: "Number of Engines"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["1", "2", "4"]
+    passive: true
+
+  - name: "number_of_seats"
+    type: string
+    description: "Maximum number of seats in the aircraft, from the FAA aircraft reference table"
+    display_name: "Number of Seats"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["4", "189", "12"]
+    passive: true
+
+  - name: "aircraft_weight_class"
+    type: string
+    description: "Maximum gross takeoff weight classification of the aircraft"
+    display_name: "Aircraft Weight Class"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Up to 12,499 lbs", "12,500 - 19,999 lbs", "20,000 and over"]
+    passive: true
+
+  - name: "cruising_speed"
+    type: string
+    description: "Average cruising speed of the aircraft in miles per hour, from the FAA aircraft reference table"
+    display_name: "Cruising Speed"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["124", "530"]
+    passive: true
+
+  - name: "aircraft_category"
+    type: string
+    description: "Land, sea, or amphibian classification of the aircraft"
+    display_name: "Aircraft Category"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Land", "Sea", "Amphibian"]
+    passive: true
+
+  - name: "builder_certification"
+    type: string
+    description: "Builder certification classification indicating whether the aircraft is type certificated"
+    display_name: "Builder Certification"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Type Certificated", "Not Type Certificated", "Light Sport"]
+    passive: true
+
+  - name: "type_certificate_data_sheet"
+    type: string
+    description: "FAA Type Certificate Data Sheet reference number"
+    display_name: "TC Data Sheet"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "type_certificate_holder"
+    type: string
+    description: "Name of the Type Certificate holder for this aircraft model"
+    display_name: "TC Data Holder"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "aircraft_type"
+    type: string
+    description: "Type of aircraft such as fixed wing, rotorcraft, glider, or balloon"
+    display_name: "Aircraft Type"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Fixed wing single engine", "Rotorcraft", "Balloon"]
+    passive: true
+
+  - name: "engine_type"
+    type: string
+    description: "Type of engine installed on the aircraft"
+    display_name: "Engine Type"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Reciprocating", "Turbo-fan", "Electric"]
+    passive: true
+
+  - name: "year_manufactured"
+    type: string
+    description: "Year the aircraft was manufactured"
+    display_name: "Year Manufactured"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["1978", "2023"]
+    passive: true
+
+  # Joined Engine Details (from ENGINE.txt)
+  - name: "engine_manufacturer"
+    type: string
+    description: "Name of the engine manufacturer, joined from the FAA engine reference table"
+    display_name: "Engine Manufacturer"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["LYCOMING", "CONT MOTOR", "P&W"]
+    passive: true
+
+  - name: "engine_model"
+    type: string
+    description: "Engine model name, joined from the FAA engine reference table"
+    display_name: "Engine Model"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["O-320-D2J", "IO-540"]
+    passive: true
+
+  - name: "engine_horsepower"
+    type: string
+    description: "Engine horsepower for reciprocating and turboprop engines, from the FAA engine reference table"
+    display_name: "Engine Horsepower"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["180", "310"]
+    passive: true
+
+  - name: "engine_thrust"
+    type: string
+    description: "Engine thrust in pounds for turbojet and turbofan engines, from the FAA engine reference table"
+    display_name: "Engine Thrust"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["27300", "56000"]
+    passive: true
+
+  # Registration Status
+  - name: "aircraft_registration_status"
+    type: string
+    description: "Current FAA registration status of the aircraft"
+    display_name: "Registration Status"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Valid Registration", "Registration Expired", "Sale reported"]
+    passive: true
+
+  - name: "registrant_type"
+    type: string
+    description: "Type of entity that owns the aircraft"
+    display_name: "Registrant Type"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    examples: ["Individual", "Corporation", "LLC", "Government"]
+    passive: true
+
+  - name: "fractional_ownership"
+    type: string
+    description: "Whether the aircraft registration has fractional ownership"
+    display_name: "Fractional Ownership"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["true", "false"]
+    passive: true
+
+  # Certification
+  - name: "airworthiness_class"
+    type: string
+    description: "FAA airworthiness certificate classification"
+    display_name: "Airworthiness Class"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["Standard", "Experimental", "Restricted", "Light Sport"]
+    passive: true
+
+  # Registrant address (on person/organization entities)
+  - name: "address"
+    type: string
+    description: "Physical street address of the entity"
+    display_name: "Address"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    examples: ["1030 DELTA BLVD, ATLANTA, GA 30354"]
+    passive: true
+
+  # Dates
+  - name: "last_activity_date"
+    type: string
+    description: "Date of last registration activity"
+    display_name: "Last Activity Date"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "certificate_issue_date"
+    type: string
+    description: "Date the registration certificate was issued"
+    display_name: "Certificate Issue Date"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "airworthiness_date"
+    type: string
+    description: "Date of airworthiness certification"
+    display_name: "Airworthiness Date"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "expiration_date"
+    type: string
+    description: "Certificate of Registration expiration date"
+    display_name: "Expiration Date"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  # DEREG.txt-specific
+  - name: "cancel_date"
+    type: string
+    description: "Date the aircraft registration was canceled"
+    display_name: "Cancel Date"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "export_country"
+    type: string
+    description: "Country the aircraft was exported to upon deregistration"
+    display_name: "Export Country"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    examples: ["AUSTRALIA", "CANADA", "BRAZIL"]
+    passive: true
+
+  # Kit Aircraft
+  - name: "kit_manufacturer"
+    type: string
+    description: "Kit manufacturer name for kit-built aircraft"
+    display_name: "Kit Manufacturer"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+  - name: "kit_model"
+    type: string
+    description: "Kit model name for kit-built aircraft"
+    display_name: "Kit Model"
+    mergeability: not_mergeable
+    domain_flavors: ["aircraft"]
+    passive: true
+
+relationships:
+  - name: "owns_aircraft"
+    description: "A person or organization owns (is the registered owner of) an aircraft"
+    display_name: "Owns Aircraft"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    target_flavors: ["aircraft"]
+    examples: ["DELTA AIR LINES INC owns aircraft N12345"]
+    passive: true
+
+  - name: "manufactures"
+    description: "An organization manufactures or produced an aircraft"
+    display_name: "Manufactures"
+    mergeability: not_mergeable
+    domain_flavors: ["organization"]
+    target_flavors: ["aircraft"]
+    examples: ["CESSNA manufactures CESSNA 172S (S/N 28-7990244)"]
+    passive: true
+
+  - name: "is_located_at"
+    description: "An entity is located at, operates in, resides in, is headquartered in, was born in, visits, or died in a location"
+    display_name: "Located At"
+    mergeability: not_mergeable
+    domain_flavors: ["person", "organization"]
+    target_flavors: ["location"]
+    examples: ["DELTA AIR LINES INC is located at ATLANTA, GA"]
+    passive: true

@@ -1,0 +1,77 @@
+# Dataset schema for the FIPS Codes (Federal Information Processing
+# Standard) source — the FCC mirror of the Census Bureau's two-digit
+# state and five-digit county FIPS code list.
+#
+# Source: https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt
+# Cadence: effectively static (codes change once every several years).
+#
+# This schema describes U.S. states and counties as `location` entities
+# identified by their FIPS strong IDs, along with a containment
+# relationship from each county to its parent state.
+name: "fips"
+description: "U.S. state and county Federal Information Processing Standard (FIPS) codes from the FCC mirror of the Census Bureau list, modelled as `location` entities with FIPS strong IDs"
+
+extraction:
+  flavors: closed
+  properties: closed
+  relationships: closed
+  attributes: closed
+  events: closed
+
+flavors:
+  - name: "location"
+    description: "A specific named geographic location such as a city, country, region, or landmark"
+    display_name: "Location"
+    mergeability: not_mergeable
+    strong_id_properties: ["fips_state", "fips_county"]
+    examples: ["New York City", "San Francisco", "North America", "Bakery Square"]
+    passive: true
+
+properties:
+  - name: "fips_state"
+    type: string
+    description: "Two-digit Federal Information Processing Standard code that uniquely identifies a U.S. state or the District of Columbia"
+    display_name: "State FIPS Code"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    examples: ["01", "06", "11", "36"]
+    passive: true
+
+  - name: "fips_county"
+    type: string
+    description: "Five-digit Federal Information Processing Standard code that uniquely identifies a U.S. county or county-equivalent; the leading two digits are the parent state's FIPS code"
+    display_name: "County FIPS Code"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    examples: ["01001", "06037", "22033", "51790"]
+    passive: true
+
+  - name: "administrative_level"
+    namespace: "fips"
+    type: string
+    description: "Granularity of the geographic entity within the U.S. federal hierarchy of states and counties"
+    display_name: "Administrative Level"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    examples: ["state", "county"]
+    passive: true
+
+  - name: "official_name"
+    namespace: "fips"
+    type: string
+    description: "Verbatim place name as published in the FCC mirror of the FIPS code list, with parenthesized historical annotations stripped"
+    display_name: "Official FIPS Name"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    examples: ["ALABAMA", "Autauga County", "Aleutians East Borough", "East Baton Rouge Parish"]
+    passive: true
+
+relationships:
+  - name: "located_in"
+    description: "Administrative territory or location the entity is situated in (Wikidata P131, P276)"
+    display_name: "Located In"
+    mergeability: not_mergeable
+    domain_flavors: ["location"]
+    target_flavors: ["location"]
+    examples: ["Autauga County is located in Alabama", "Los Angeles County is located in California"]
+    passive: true
