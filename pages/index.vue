@@ -35,9 +35,11 @@
                         <div>
                             <div class="step-title">Deploy</div>
                             <div class="step-desc">
-                                Push to main to auto-deploy on Vercel. Use
-                                <code>/deploy_agent</code> or <code>/deploy_mcp</code> for backend
-                                services.
+                                Push to <code>main</code> — the
+                                <strong>Deploy Aether UI</strong> GitHub Action builds the container
+                                image and ArgoCD rolls it into the per-tenant GKE cluster (~6–11 min
+                                end-to-end). Use <code>/deploy_agent</code> or
+                                <code>/deploy_mcp</code> for backend services.
                             </div>
                         </div>
                     </div>
